@@ -1,0 +1,155 @@
+.filter-card {
+  margin-bottom: 20px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+
+  mat-form-field {
+    flex: 1;
+    min-width: 180px;
+  }
+}
+
+.analytics-section {
+  margin-bottom: 30px;
+
+  h3 {
+    color: #3f51b5;
+    margin-bottom: 16px;
+  }
+}
+
+.chart-table-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.chart-container {
+  flex: 1;
+  min-width: 400px;
+  max-height: 400px;
+}
+
+@media (max-width: 900px) {
+  .chart-container {
+    min-width: 320px;
+  }
+}
+
+.table-container {
+  flex: 1;
+  min-width: 300px;
+  overflow-x: auto;
+}
+
+.no-data {
+  text-align: center;
+  color: #999;
+  padding: 20px;
+}
+
+.expandable-table {
+  .row-main {
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #f5f5f5;
+    }
+
+    &.expanded-row {
+      background-color: #e3f2fd;
+    }
+  }
+
+  .detail-row {
+    height: 0;
+  }
+
+  .row-detail {
+    overflow: hidden;
+    display: flex;
+    padding: 0;
+  }
+
+  .detail-content {
+    width: 100%;
+    padding: 16px;
+    background-color: #fafafa;
+
+    h4 {
+      margin: 0 0 12px 0;
+      color: #3f51b5;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .detail-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+
+      thead {
+        background-color: #e8eaf6;
+        
+        th {
+          padding: 8px 12px;
+          text-align: left;
+          font-weight: 500;
+          color: #3f51b5;
+          border-bottom: 2px solid #3f51b5;
+        }
+      }
+
+      tbody {
+        tr {
+          border-bottom: 1px solid #e0e0e0;
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          &:hover {
+            background-color: #f5f5f5;
+          }
+        }
+
+        td {
+          padding: 8px 12px;
+          color: #333;
+        }
+      }
+    }
+  }
+
+  .detail-loading {
+    width: 100%;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background-color: #fafafa;
+    color: #666;
+    font-size: 14px;
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #e0e0e0;
+      border-top: 3px solid #3f51b5;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+}

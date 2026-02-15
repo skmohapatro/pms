@@ -1,0 +1,212 @@
+<div class="container">
+  <h2 class="page-title">Investment Analytics</h2>
+
+  <!-- Filters -->
+  <mat-card class="filter-card">
+    <mat-card-content>
+      <div class="filter-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Start Date</mat-label>
+          <input matInput type="date" [(ngModel)]="startDate">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>End Date</mat-label>
+          <input matInput type="date" [(ngModel)]="endDate">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Company</mat-label>
+          <mat-select [(ngModel)]="selectedCompany">
+            <mat-option value="">All Companies</mat-option>
+            <mat-option *ngFor="let c of companies" [value]="c">{{ c }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" (click)="applyFilters()">
+          <mat-icon>filter_list</mat-icon> Apply
+        </button>
+        <button mat-stroked-button (click)="clearFilters()">
+          <mat-icon>clear</mat-icon> Clear
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Group Comparison Section -->
+  <div class="analytics-section">
+    <h3>Group Comparison</h3>
+    <div class="chart-table-row">
+      <div class="chart-container" *ngIf="groupSummaries.length > 0">
+        <canvas baseChart #groupChart="base-chart"
+                [data]="groupChartData"
+                [options]="groupChartOptions"
+                type="bar">
+        </canvas>
+      </div>
+      <div class="table-container">
+        <table mat-table [dataSource]="groupSummaries" class="mat-elevation-z1 expandable-table" *ngIf="groupSummaries.length > 0" multiTemplateDataRows>
+          <ng-container matColumnDef="groupName">
+            <th mat-header-cell *matHeaderCellDef> Group </th>
+            <td mat-cell *matCellDef="let row"> {{ row.groupName }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="instrumentCount">
+            <th mat-header-cell *matHeaderCellDef> Instruments </th>
+            <td mat-cell *matCellDef="let row"> {{ row.instrumentCount }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="totalQty">
+            <th mat-header-cell *matHeaderCellDef> Total Qty </th>
+            <td mat-cell *matCellDef="let row"> {{ row.totalQty | number:'1.0-2' }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="totalInvested">
+            <th mat-header-cell *matHeaderCellDef> Total Invested </th>
+            <td mat-cell *matCellDef="let row"> {{ row.totalInvested | number:'1.2-2' }} </td>
+          </ng-container>
+
+          <!-- Expanded Content Column -->
+          <ng-container matColumnDef="groupExpandedDetail">
+            <td mat-cell *matCellDef="let row" [attr.colspan]="groupDisplayedColumns.length">
+              <div class="row-detail" [@detailExpand]="row.expanded ? 'expanded' : 'collapsed'">
+                <div class="detail-content" *ngIf="row.instruments">
+                  <h4>Instruments in {{ row.groupName }}</h4>
+                  <table class="detail-table">
+                    <thead>
+                      <tr>
+                        <th>Stock Name</th>
+                        <th>Quantity</th>
+                        <th>Avg Cost</th>
+                        <th>Invested Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let inst of row.instruments">
+                        <td>{{ inst.instrument }}</td>
+                        <td>{{ inst.qty | number:'1.0-2' }}</td>
+                        <td>{{ inst.avgCost | number:'1.2-2' }}</td>
+                        <td>{{ inst.invested | number:'1.2-2' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p *ngIf="row.instruments.length === 0" class="no-data">No instruments in this group.</p>
+                </div>
+                <div class="detail-loading" *ngIf="!row.instruments">
+                  <div class="spinner"></div>
+                  <span>Loading instruments...</span>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="groupDisplayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: groupDisplayedColumns;"
+              class="row-main"
+              [class.expanded-row]="isGroupExpanded(row)"
+              (click)="toggleGroupRow(row)"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['groupExpandedDetail']" class="detail-row"></tr>
+        </table>
+        <p *ngIf="groupSummaries.length === 0" class="no-data">No group data available.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly Section -->
+  <div class="analytics-section">
+    <h3>Monthly Investment</h3>
+    <div class="chart-table-row">
+      <div class="chart-container" *ngIf="monthlyData.length > 0">
+        <canvas baseChart #monthlyChart="base-chart"
+                [data]="monthlyChartData"
+                [options]="monthlyChartOptions"
+                type="bar">
+        </canvas>
+      </div>
+      <div class="table-container">
+        <table mat-table [dataSource]="monthlyData" class="mat-elevation-z1 expandable-table" *ngIf="monthlyData.length > 0" multiTemplateDataRows>
+          <ng-container matColumnDef="monthName">
+            <th mat-header-cell *matHeaderCellDef> Month </th>
+            <td mat-cell *matCellDef="let row"> {{ row.monthName }} </td>
+          </ng-container>
+          <ng-container matColumnDef="totalInvestment">
+            <th mat-header-cell *matHeaderCellDef> Total Investment </th>
+            <td mat-cell *matCellDef="let row"> {{ row.totalInvestment | number:'1.2-2' }} </td>
+          </ng-container>
+          <ng-container matColumnDef="cumulativeInvestment">
+            <th mat-header-cell *matHeaderCellDef> Cumulative Investment </th>
+            <td mat-cell *matCellDef="let row"> {{ row.cumulativeInvestment | number:'1.2-2' }} </td>
+          </ng-container>
+
+          <!-- Expanded Content Column -->
+          <ng-container matColumnDef="expandedDetail">
+            <td mat-cell *matCellDef="let row" [attr.colspan]="monthlyDisplayedColumns.length">
+              <div class="row-detail" [@detailExpand]="row.expanded ? 'expanded' : 'collapsed'">
+                <div class="detail-content" *ngIf="row.stockDetails">
+                  <h4>Stock Details</h4>
+                  <table class="detail-table">
+                    <thead>
+                      <tr>
+                        <th>Stock Name</th>
+                        <th>Quantity Purchased</th>
+                        <th>Invested Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let stock of row.stockDetails">
+                        <td>{{ stock.stockName }}</td>
+                        <td>{{ stock.quantityPurchased }}</td>
+                        <td>{{ stock.investedAmount | number:'1.2-2' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="detail-loading" *ngIf="!row.stockDetails">
+                  <div class="spinner"></div>
+                  <span>Loading stock details...</span>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="monthlyDisplayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: monthlyDisplayedColumns;" 
+              class="row-main" 
+              [class.expanded-row]="isExpanded(row)"
+              (click)="toggleRow(row)"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></tr>
+        </table>
+        <p *ngIf="monthlyData.length === 0" class="no-data">No monthly data available.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Yearly Section -->
+  <div class="analytics-section">
+    <h3>Yearly Investment</h3>
+    <div class="chart-table-row">
+      <div class="chart-container" *ngIf="yearlyData.length > 0">
+        <canvas baseChart #yearlyChart="base-chart"
+                [data]="yearlyChartData"
+                [options]="yearlyChartOptions"
+                type="bar">
+        </canvas>
+      </div>
+      <div class="table-container">
+        <table mat-table [dataSource]="yearlyData" class="mat-elevation-z1" *ngIf="yearlyData.length > 0">
+          <ng-container matColumnDef="year">
+            <th mat-header-cell *matHeaderCellDef> Year </th>
+            <td mat-cell *matCellDef="let row"> {{ row.year }} </td>
+          </ng-container>
+          <ng-container matColumnDef="totalInvestment">
+            <th mat-header-cell *matHeaderCellDef> Total Investment </th>
+            <td mat-cell *matCellDef="let row"> {{ row.totalInvestment | number:'1.2-2' }} </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="yearlyDisplayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: yearlyDisplayedColumns;"></tr>
+        </table>
+        <p *ngIf="yearlyData.length === 0" class="no-data">No yearly data available.</p>
+      </div>
+    </div>
+  </div>
+</div>

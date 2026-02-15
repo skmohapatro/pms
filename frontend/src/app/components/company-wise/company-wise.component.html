@@ -1,0 +1,70 @@
+<div class="container">
+  <h2 class="page-title">Company Wise Aggregated Data</h2>
+
+  <div class="summary-cards">
+    <mat-card class="summary-card">
+      <mat-card-content>
+        <div class="summary-label">Total Companies</div>
+        <div class="summary-value">{{ dataSource.data.length }}</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="summary-card">
+      <mat-card-content>
+        <div class="summary-label">Total Quantity</div>
+        <div class="summary-value">{{ totalQty | number:'1.0-0' }}</div>
+      </mat-card-content>
+    </mat-card>
+    <mat-card class="summary-card">
+      <mat-card-content>
+        <div class="summary-label">Total Invested</div>
+        <div class="summary-value">{{ totalInvested | number:'1.2-2' }}</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <mat-form-field appearance="outline" class="filter-field">
+    <mat-label>Search Instrument</mat-label>
+    <input matInput (keyup)="applyFilter($event)" placeholder="Filter...">
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <div class="table-container mat-elevation-z2">
+    <table mat-table [dataSource]="dataSource" matSort>
+
+      <ng-container matColumnDef="instrument">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Instrument </th>
+        <td mat-cell *matCellDef="let row">
+          <a class="instrument-link" [href]="getScreenerUrl(row.instrument)" target="_blank" rel="noopener noreferrer">
+            {{ row.instrument }}
+          </a>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="qty">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Qty </th>
+        <td mat-cell *matCellDef="let row"> {{ row.qty | number:'1.0-2' }} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="avgCost">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Avg. Cost </th>
+        <td mat-cell *matCellDef="let row"> {{ row.avgCost | number:'1.2-2' }} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="invested">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Invested </th>
+        <td mat-cell *matCellDef="let row"> {{ row.invested | number:'1.2-2' }} </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell" colspan="4" style="text-align: center; padding: 20px;">
+          No aggregated data available. Upload an Excel file first.
+        </td>
+      </tr>
+    </table>
+
+    <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
+  </div>
+</div>

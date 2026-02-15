@@ -1,0 +1,66 @@
+.groups-layout {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.groups-panel {
+  flex: 1;
+  min-width: 300px;
+}
+
+.detail-panel {
+  flex: 2;
+  min-width: 400px;
+}
+
+.create-group-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.group-name-field {
+  flex: 1;
+}
+
+.group-item {
+  cursor: pointer;
+  height: auto !important;
+  padding: 8px 0 !important;
+}
+
+.group-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.group-name {
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    color: #3f51b5;
+  }
+}
+
+.group-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.no-data {
+  text-align: center;
+  color: #999;
+  padding: 20px;
+}
+
+.placeholder-card {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,0 +1,32 @@
+.upload-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  .file-name {
+    color: #666;
+    font-style: italic;
+  }
+}
+
+.upload-actions {
+  margin-bottom: 16px;
+}
+
+.result-card {
+  margin-top: 20px;
+  background-color: #e8f5e9;
+}
+
+.info-card {
+  margin-top: 20px;
+
+  ul {
+    padding-left: 20px;
+
+    li {
+      margin-bottom: 8px;
+    }
+  }
+}

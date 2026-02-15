@@ -1,0 +1,24 @@
+<mat-toolbar color="primary" class="app-toolbar">
+  <mat-icon>trending_up</mat-icon>
+  <span class="app-title">Investment Portfolio</span>
+  <span class="spacer"></span>
+  <nav class="nav-links">
+    <a mat-button routerLink="/upload" routerLinkActive="active-link">
+      <mat-icon>cloud_upload</mat-icon> Upload
+    </a>
+    <a mat-button routerLink="/purchases" routerLinkActive="active-link">
+      <mat-icon>receipt_long</mat-icon> Purchases
+    </a>
+    <a mat-button routerLink="/company-wise" routerLinkActive="active-link">
+      <mat-icon>business</mat-icon> Company Wise
+    </a>
+    <a mat-button routerLink="/groups" routerLinkActive="active-link">
+      <mat-icon>category</mat-icon> Groups
+    </a>
+    <a mat-button routerLink="/analytics" routerLinkActive="active-link">
+      <mat-icon>analytics</mat-icon> Analytics
+    </a>
+  </nav>
+</mat-toolbar>
+
+<router-outlet></router-outlet>

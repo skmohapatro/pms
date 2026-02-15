@@ -1,0 +1,48 @@
+<div class="container">
+  <h2 class="page-title">Upload Holdings Excel</h2>
+
+  <mat-card>
+    <mat-card-content>
+      <div class="upload-area">
+        <input type="file" accept=".xlsx,.xls" (change)="onFileSelected($event)" #fileInput hidden>
+        <button mat-raised-button color="primary" (click)="fileInput.click()">
+          <mat-icon>cloud_upload</mat-icon>
+          Choose Excel File
+        </button>
+        <span class="file-name" *ngIf="selectedFile">{{ selectedFile.name }}</span>
+      </div>
+
+      <div class="upload-actions" *ngIf="selectedFile">
+        <button mat-raised-button color="accent" (click)="upload()" [disabled]="uploading">
+          <mat-icon>publish</mat-icon>
+          {{ uploading ? 'Uploading...' : 'Upload & Import' }}
+        </button>
+        <mat-progress-bar *ngIf="uploading" mode="indeterminate"></mat-progress-bar>
+      </div>
+
+      <mat-card *ngIf="result" class="result-card">
+        <mat-card-header>
+          <mat-card-title>Upload Result</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p><strong>Total Rows:</strong> {{ result.totalRows }}</p>
+          <p><strong>Imported:</strong> {{ result.successRows }}</p>
+          <p><strong>Skipped:</strong> {{ result.failedRows }}</p>
+          <p><strong>Message:</strong> {{ result.message }}</p>
+        </mat-card-content>
+      </mat-card>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="info-card">
+    <mat-card-content>
+      <h3>Instructions</h3>
+      <ul>
+        <li>Upload an <strong>.xlsx</strong> file containing your holdings data.</li>
+        <li>The file must have a worksheet named <strong>"Purchase Date Wise"</strong>.</li>
+        <li>Expected columns: <strong>Date, Company, Quantity, Price, Investment</strong>.</li>
+        <li>Uploading will <strong>replace</strong> all existing data and rebuild aggregations.</li>
+      </ul>
+    </mat-card-content>
+  </mat-card>
+</div>
