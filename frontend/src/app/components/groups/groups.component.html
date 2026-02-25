@@ -51,10 +51,12 @@
           </mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          <table mat-table [dataSource]="selectedGroupDetail.instruments" class="mat-elevation-z1" *ngIf="selectedGroupDetail.instruments.length > 0">
+          <table mat-table [dataSource]="enrichedInstruments" class="mat-elevation-z1" multiTemplateDataRows *ngIf="enrichedInstruments.length > 0">
             <ng-container matColumnDef="instrument">
               <th mat-header-cell *matHeaderCellDef> Instrument </th>
-              <td mat-cell *matCellDef="let row"> {{ row.instrument }} </td>
+              <td mat-cell *matCellDef="let row"> 
+                <span class="instrument-name">{{ row.instrument }}</span>
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="qty">
@@ -75,17 +77,108 @@
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef> </th>
               <td mat-cell *matCellDef="let row">
-                <button mat-icon-button color="warn" (click)="removeInstrument(row.id)" matTooltip="Remove from group">
+                <button mat-icon-button color="warn" (click)="removeInstrument(row.id); $event.stopPropagation()" matTooltip="Remove from group">
                   <mat-icon>remove_circle</mat-icon>
                 </button>
               </td>
             </ng-container>
 
+            <!-- Expandable Detail Row -->
+            <ng-container matColumnDef="expandedDetail">
+              <td mat-cell *matCellDef="let row" [attr.colspan]="5">
+                <div class="detail-row" [@detailExpand]="row === expandedElement ? 'expanded' : 'collapsed'">
+                  <div class="detail-content" *ngIf="row === expandedElement">
+                    <!-- Header with symbol, external links, refresh -->
+                    <div class="detail-header">
+                      <div class="header-left">
+                        <span class="symbol">{{ row.instrument }}</span>
+                        <div class="external-links">
+                          <a class="brand-link nse" [href]="getNseUrl(row.instrument)" target="_blank" rel="noopener noreferrer">
+                            <mat-icon class="brand-icon">show_chart</mat-icon>
+                            <span>NSE</span>
+                            <mat-icon class="link-icon">open_in_new</mat-icon>
+                          </a>
+                          <a class="brand-link screener" [href]="getScreenerUrl(row.instrument)" target="_blank" rel="noopener noreferrer">
+                            <mat-icon class="brand-icon">article</mat-icon>
+                            <span>Screener</span>
+                            <mat-icon class="link-icon">open_in_new</mat-icon>
+                          </a>
+                          <a class="brand-link tickertape" [href]="getTickertapeUrl(row.instrument)" target="_blank" rel="noopener noreferrer">
+                            <mat-icon class="brand-icon">trending_up</mat-icon>
+                            <span>Tickertape</span>
+                            <mat-icon class="link-icon">open_in_new</mat-icon>
+                          </a>
+                        </div>
+                      </div>
+                      <button mat-icon-button (click)="refreshDetail(row, $event)" [disabled]="row.detailLoading">
+                        <mat-icon>{{ row.detailLoading ? 'hourglass_empty' : 'refresh' }}</mat-icon>
+                      </button>
+                    </div>
+
+                    <!-- Price section -->
+                    <div class="price-header" *ngIf="row.ltp">
+                      <div class="current-price">₹{{ row.ltp | number:'1.2-2' }}</div>
+                      <div class="price-change" [ngClass]="getPnlClass(row.dayChange)">
+                        <span *ngIf="row.dayChange != null">
+                          ↗ ₹{{ row.dayChange | number:'1.2-2' }} ({{ row.dayChangePerc >= 0 ? '+' : '' }}{{ row.dayChangePerc | number:'1.2-2' }}%)
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Detail cards -->
+                    <div class="detail-cards" *ngIf="row.detail; else loadingDetail">
+                      <!-- OHLC -->
+                      <div class="detail-card">
+                        <div class="card-title"><mat-icon>show_chart</mat-icon> OHLC (Today)</div>
+                        <div class="card-row"><span>Open</span><span>₹{{ row.detail.ohlc?.open | number:'1.2-2' }}</span></div>
+                        <div class="card-row"><span>High</span><span class="positive">₹{{ row.detail.ohlc?.high | number:'1.2-2' }}</span></div>
+                        <div class="card-row"><span>Low</span><span class="negative">₹{{ row.detail.ohlc?.low | number:'1.2-2' }}</span></div>
+                        <div class="card-row"><span>Prev Close</span><span>₹{{ row.detail.ohlc?.close | number:'1.2-2' }}</span></div>
+                      </div>
+
+                      <!-- Bid / Offer -->
+                      <div class="detail-card">
+                        <div class="card-title"><mat-icon>swap_vert</mat-icon> Bid / Offer</div>
+                        <div class="card-row"><span>Bid Price</span><span>{{ row.detail.bid_price != null ? '₹' + (row.detail.bid_price | number:'1.2-2') : '-' }}</span></div>
+                        <div class="card-row"><span>Offer Price</span><span>{{ row.detail.offer_price != null ? '₹' + (row.detail.offer_price | number:'1.2-2') : '-' }}</span></div>
+                        <div class="card-row"><span>Total Buy Qty</span><span>{{ row.detail.total_buy_quantity | number:'1.0-0' }}</span></div>
+                        <div class="card-row"><span>Total Sell Qty</span><span>{{ row.detail.total_sell_quantity | number:'1.0-0' }}</span></div>
+                      </div>
+
+                      <!-- 52 Week Range -->
+                      <div class="detail-card">
+                        <div class="card-title"><mat-icon>date_range</mat-icon> 52 Week Range</div>
+                        <div class="card-row"><span>52W High</span><span class="positive">₹{{ row.detail.week_52_high | number:'1.2-2' }}</span></div>
+                        <div class="card-row"><span>52W Low</span><span class="negative">₹{{ row.detail.week_52_low | number:'1.2-2' }}</span></div>
+                        <div class="card-row"><span>Upper Circuit</span><span class="positive">₹{{ row.detail.upper_circuit_limit | number:'1.2-2' }}</span></div>
+                        <div class="card-row"><span>Lower Circuit</span><span class="negative">₹{{ row.detail.lower_circuit_limit | number:'1.2-2' }}</span></div>
+                      </div>
+
+                      <!-- Volume & Market Cap -->
+                      <div class="detail-card">
+                        <div class="card-title"><mat-icon>bar_chart</mat-icon> Volume & Market Cap</div>
+                        <div class="card-row"><span>Volume</span><span>{{ row.detail.volume | number:'1.0-0' }}</span></div>
+                        <div class="card-row"><span>Market Cap</span><span>{{ row.detail.market_cap != null ? (row.detail.market_cap | number:'1.0-0') : '-' }}</span></div>
+                      </div>
+                    </div>
+
+                    <ng-template #loadingDetail>
+                      <div class="loading-detail" *ngIf="row.detailLoading">Loading details...</div>
+                    </ng-template>
+                  </div>
+                </div>
+              </td>
+            </ng-container>
+
             <tr mat-header-row *matHeaderRowDef="['instrument', 'qty', 'avgCost', 'invested', 'actions']"></tr>
-            <tr mat-row *matRowDef="let row; columns: ['instrument', 'qty', 'avgCost', 'invested', 'actions'];"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['instrument', 'qty', 'avgCost', 'invested', 'actions'];"
+                class="element-row"
+                [class.expanded-row]="expandedElement === row"
+                (click)="toggleRow(row)"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row-def"></tr>
           </table>
 
-          <p *ngIf="selectedGroupDetail.instruments.length === 0" class="no-data">
+          <p *ngIf="enrichedInstruments.length === 0" class="no-data">
             No instruments assigned to this group yet.
           </p>
         </mat-card-content>

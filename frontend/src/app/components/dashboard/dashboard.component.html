@@ -1,0 +1,248 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <h1><mat-icon>dashboard</mat-icon> Dashboard</h1>
+    <button mat-raised-button color="primary" (click)="refreshDashboard()">
+      <mat-icon>refresh</mat-icon> Refresh
+    </button>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="summary-cards">
+    <mat-card class="summary-card" *ngIf="!summaryLoading; else summarySkeletonTpl">
+      <div class="card-icon invested"><mat-icon>account_balance_wallet</mat-icon></div>
+      <div class="card-info">
+        <span class="card-label">Total Invested</span>
+        <span class="card-value">₹{{ summary?.totalInvested | number:'1.0-0' }}</span>
+      </div>
+    </mat-card>
+
+    <mat-card class="summary-card">
+      <div class="card-icon companies"><mat-icon>business</mat-icon></div>
+      <div class="card-info">
+        <span class="card-label">Companies</span>
+        <span class="card-value">{{ summary?.totalCompanies || 0 }}</span>
+      </div>
+    </mat-card>
+
+    <mat-card class="summary-card">
+      <div class="card-icon" [ngClass]="(summary?.totalPnl || 0) >= 0 ? 'pnl-positive' : 'pnl-negative'">
+        <mat-icon>{{ (summary?.totalPnl || 0) >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+      </div>
+      <div class="card-info">
+        <span class="card-label">Day's P&L</span>
+        <span class="card-value" [ngClass]="getPnlClass(summary?.totalPnl || 0)">
+          ₹{{ summary?.totalPnl | number:'1.0-0' }}
+        </span>
+      </div>
+    </mat-card>
+
+    <mat-card class="summary-card">
+      <div class="card-icon portfolio"><mat-icon>pie_chart</mat-icon></div>
+      <div class="card-info">
+        <span class="card-label">Portfolio Value</span>
+        <span class="card-value">₹{{ summary?.portfolioValue | number:'1.0-0' }}</span>
+      </div>
+    </mat-card>
+
+    <mat-card class="summary-card">
+      <div class="card-icon watchlist"><mat-icon>visibility</mat-icon></div>
+      <div class="card-info">
+        <span class="card-label">Watchlist</span>
+        <span class="card-value">{{ summary?.watchlistCount || 0 }} stocks</span>
+      </div>
+    </mat-card>
+  </div>
+
+  <ng-template #summarySkeletonTpl>
+    <mat-card class="summary-card skeleton-card" *ngFor="let i of [1,2,3,4,5]">
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    </mat-card>
+  </ng-template>
+
+  <!-- AI Insights Section -->
+  <mat-card class="insights-card">
+    <mat-card-header>
+      <mat-card-title><mat-icon>auto_awesome</mat-icon> AI Insights</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngIf="!insightsLoading; else insightsSkeletonTpl">
+        <!-- Market Summary -->
+        <div class="insight-section" *ngIf="insights?.marketSummary">
+          <div class="section-header">
+            <mat-icon>show_chart</mat-icon>
+            <h3>Market Summary</h3>
+          </div>
+          <p class="insight-text">{{ insights!.marketSummary }}</p>
+        </div>
+
+        <!-- Portfolio Insights -->
+        <div class="insight-section" *ngIf="insights?.portfolioInsights?.length">
+          <div class="section-header">
+            <mat-icon>lightbulb</mat-icon>
+            <h3>Portfolio Insights</h3>
+          </div>
+          <ul class="insight-list">
+            <li *ngFor="let insight of insights!.portfolioInsights">{{ insight }}</li>
+          </ul>
+        </div>
+
+        <!-- Watchlist Alerts -->
+        <div class="insight-section" *ngIf="insights?.watchlistAlerts?.length">
+          <div class="section-header">
+            <mat-icon>visibility</mat-icon>
+            <h3>Watchlist Alerts</h3>
+          </div>
+          <ul class="insight-list watchlist-alerts">
+            <li *ngFor="let alert of insights!.watchlistAlerts">{{ alert }}</li>
+          </ul>
+        </div>
+
+        <!-- Risk Alerts -->
+        <div class="insight-section risk" *ngIf="insights?.riskAlerts?.length">
+          <div class="section-header">
+            <mat-icon>warning</mat-icon>
+            <h3>Risk Alerts</h3>
+          </div>
+          <ul class="insight-list risk-list">
+            <li *ngFor="let risk of insights!.riskAlerts">{{ risk }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <ng-template #insightsSkeletonTpl>
+        <div class="skeleton-insights">
+          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+          <p class="loading-text">Generating AI insights...</p>
+        </div>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Bottom Row: Movers + News -->
+  <div class="bottom-row">
+    <!-- Top Movers -->
+    <mat-card class="movers-card">
+      <mat-card-header>
+        <mat-card-title><mat-icon>swap_vert</mat-icon> Top Movers</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <!-- Top Gainers -->
+        <div class="movers-section" *ngIf="topGainers.length > 0">
+          <h4 class="positive"><mat-icon>arrow_upward</mat-icon> Top Gainers</h4>
+          <div class="mover-item" *ngFor="let stock of topGainers">
+            <div class="mover-info">
+              <span class="mover-symbol">{{ stock.symbol }}</span>
+              <span class="mover-badge">{{ getSourceBadge(stock.source) }}</span>
+            </div>
+            <div class="mover-price">
+              <span class="mover-ltp">₹{{ stock.lastPrice | number:'1.2-2' }}</span>
+              <span class="positive">+{{ stock.changePercent | number:'1.2-2' }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Losers -->
+        <div class="movers-section" *ngIf="topLosers.length > 0">
+          <h4 class="negative"><mat-icon>arrow_downward</mat-icon> Top Losers</h4>
+          <div class="mover-item" *ngFor="let stock of topLosers">
+            <div class="mover-info">
+              <span class="mover-symbol">{{ stock.symbol }}</span>
+              <span class="mover-badge">{{ getSourceBadge(stock.source) }}</span>
+            </div>
+            <div class="mover-price">
+              <span class="mover-ltp">₹{{ stock.lastPrice | number:'1.2-2' }}</span>
+              <span class="negative">{{ stock.changePercent | number:'1.2-2' }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="movers-legend">
+          <span>📦 Portfolio</span>
+          <span>👀 Watchlist</span>
+        </div>
+
+        <div *ngIf="topGainers.length === 0 && topLosers.length === 0" class="no-data">
+          <mat-progress-bar mode="indeterminate" *ngIf="summaryLoading"></mat-progress-bar>
+          <p *ngIf="!summaryLoading">Loading live prices...</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- News Feed -->
+    <mat-card class="news-card">
+      <mat-card-header>
+        <mat-card-title><mat-icon>newspaper</mat-icon> News Feed</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <!-- Filter Tabs -->
+        <div class="news-tabs">
+          <button mat-button [class.active-tab]="newsFilter === 'all'" (click)="setNewsFilter('all')">
+            All
+          </button>
+          <button mat-button [class.active-tab]="newsFilter === 'portfolio'" (click)="setNewsFilter('portfolio')">
+            📦 Portfolio
+          </button>
+          <button mat-button [class.active-tab]="newsFilter === 'watchlist'" (click)="setNewsFilter('watchlist')">
+            👀 Watchlist
+          </button>
+        </div>
+
+        <div *ngIf="!newsLoading; else newsSkeletonTpl">
+          <div class="news-list">
+            <a class="news-item" *ngFor="let article of filteredNews"
+               [href]="article.url" target="_blank" rel="noopener noreferrer">
+              <div class="news-header">
+                <span class="news-badge" [ngClass]="getCategoryClass(article.category)">
+                  {{ getCategoryLabel(article.category) }}
+                </span>
+                <span class="news-source">{{ article.source }}</span>
+                <span class="news-date">{{ article.publishedDate }}</span>
+              </div>
+              <h4 class="news-title">{{ article.title }}</h4>
+              <p class="news-snippet" *ngIf="article.snippet">{{ article.snippet }}</p>
+              <div class="news-tags">
+                <span class="tag portfolio-tag" *ngFor="let h of article.relevantHoldings">📦 {{ h }}</span>
+                <span class="tag watchlist-tag" *ngFor="let w of article.relevantWatchlist">👀 {{ w }}</span>
+              </div>
+            </a>
+          </div>
+          <p class="no-data" *ngIf="filteredNews.length === 0">No news articles found for this filter.</p>
+        </div>
+
+        <ng-template #newsSkeletonTpl>
+          <div class="skeleton-news">
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            <p class="loading-text">Fetching latest news...</p>
+          </div>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Watchlist Alerts Table -->
+  <mat-card class="watchlist-alerts-card" *ngIf="watchlistAlerts.length > 0">
+    <mat-card-header>
+      <mat-card-title><mat-icon>visibility</mat-icon> Watchlist Price Tracker</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="alerts-grid">
+        <div class="alert-item" *ngFor="let alert of watchlistAlerts"
+             [ngClass]="getAlertClass(alert.alertType)">
+          <div class="alert-header">
+            <mat-icon>{{ getAlertIcon(alert.alertType) }}</mat-icon>
+            <span class="alert-symbol">{{ alert.symbol }}</span>
+          </div>
+          <div class="alert-body">
+            <span class="alert-price" *ngIf="alert.lastPrice">₹{{ alert.lastPrice | number:'1.2-2' }}</span>
+            <span class="alert-change" [ngClass]="getPnlClass(alert.priceChangePercent)"
+                  *ngIf="alert.priceChangePercent">
+              {{ alert.priceChangePercent >= 0 ? '+' : '' }}{{ alert.priceChangePercent | number:'1.2-2' }}%
+            </span>
+          </div>
+          <div class="alert-watchlist">{{ alert.watchlistName }}</div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

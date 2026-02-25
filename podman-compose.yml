@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: localhost/pms-backend:latest
+    container_name: pms-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend-data:/app/data
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - CHAT_BACKEND_URL=http://chat-backend:5000
+    depends_on:
+      - chat-backend
+    restart: unless-stopped
+
+  chat-backend:
+    build:
+      context: ./chat-backend
+      dockerfile: Dockerfile
+    image: localhost/pms-chat-backend:latest
+    container_name: pms-chat-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - USE_SSO=true
+      - CLIENT_ID=${CLIENT_ID:-}
+      - CLIENT_SECRET=${CLIENT_SECRET:-}
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - API_URL=/api
+    image: localhost/pms-frontend:latest
+    container_name: pms-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend-data:

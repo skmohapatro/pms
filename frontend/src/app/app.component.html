@@ -3,6 +3,9 @@
   <span class="app-title">Investment Portfolio</span>
   <span class="spacer"></span>
   <nav class="nav-links">
+    <a mat-button routerLink="/dashboard" routerLinkActive="active-link">
+      <mat-icon>dashboard</mat-icon> Dashboard
+    </a>
     <a mat-button routerLink="/upload" routerLinkActive="active-link">
       <mat-icon>cloud_upload</mat-icon> Upload
     </a>
@@ -15,8 +18,23 @@
     <a mat-button routerLink="/groups" routerLinkActive="active-link">
       <mat-icon>category</mat-icon> Groups
     </a>
+    <a mat-button routerLink="/watchlist" routerLinkActive="active-link">
+      <mat-icon>visibility</mat-icon> Watch List
+    </a>
     <a mat-button routerLink="/analytics" routerLinkActive="active-link">
       <mat-icon>analytics</mat-icon> Analytics
+    </a>
+    <a mat-button routerLink="/dividends" routerLinkActive="active-link">
+      <mat-icon>payments</mat-icon> Dividends
+    </a>
+    <a mat-button routerLink="/realized-pnl" routerLinkActive="active-link">
+      <mat-icon>show_chart</mat-icon> Realized P&amp;L
+    </a>
+    <a mat-button routerLink="/live-stock" routerLinkActive="active-link">
+      <mat-icon>candlestick_chart</mat-icon> Live Stock
+    </a>
+    <a mat-button routerLink="/chat" routerLinkActive="active-link">
+      <mat-icon>smart_toy</mat-icon> AI Chat
     </a>
   </nav>
 </mat-toolbar>

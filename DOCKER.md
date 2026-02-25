@@ -96,6 +96,7 @@ Open your web browser and navigate to:
 |---------|-----|
 | **Frontend (Main App)** | http://localhost:4200 |
 | **Backend API** | http://localhost:8080/api |
+| **Chat Backend** | http://localhost:5000 |
 | **H2 Database Console** | http://localhost:8080/h2-console |
 | **API Documentation** | http://localhost:8080/swagger-ui.html |
 
@@ -229,28 +230,49 @@ backend:
     - SPRING_DATASOURCE_URL=jdbc:h2:file:./data/portfoliodb
 ```
 
+### AI Chat Configuration
+
+The AI Chat feature uses Dell internal AI models. To configure:
+
+1. **Create a `.env` file** in the project root:
+   ```bash
+   # Copy from example
+   cp chat-backend/.env.example .env
+   ```
+
+2. **Edit `.env`** with your credentials:
+   ```
+   USE_SSO=true
+   CLIENT_ID=your-client-id
+   CLIENT_SECRET=your-client-secret
+   ```
+
+3. **Run docker-compose** - it will automatically use the `.env` file
+
+**Note:** The AI Chat requires access to Dell's internal network and valid authentication credentials.
+
 ---
 
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Docker Network                        │
-│                                                          │
-│  ┌──────────────┐         ┌──────────────────────────┐  │
-│  │   Frontend   │         │        Backend           │  │
-│  │   (nginx)    │ ──────► │    (Spring Boot)         │  │
-│  │   Port: 80   │  /api/* │      Port: 8080          │  │
-│  └──────────────┘         │                          │  │
-│         │                 │  ┌────────────────────┐  │  │
-│         │                 │  │   H2 Database      │  │  │
-│         │                 │  │   (File-based)     │  │  │
-│         │                 │  └────────────────────┘  │  │
-│         │                 └──────────────────────────┘  │
-└─────────│───────────────────────────│────────────────────┘
-          │                           │
-          ▼                           ▼
-    localhost:4200              localhost:8080
+┌────────────────────────────────────────────────────────────────────┐
+│                         Docker Network                              │
+│                                                                     │
+│  ┌──────────────┐    ┌──────────────────────────┐    ┌───────────┐ │
+│  │   Frontend   │    │        Backend           │    │   Chat    │ │
+│  │   (nginx)    │───►│    (Spring Boot)         │───►│  Backend  │ │
+│  │   Port: 80   │    │      Port: 8080          │    │ (Flask)   │ │
+│  └──────────────┘    │                          │    │ Port:5000 │ │
+│         │            │  ┌────────────────────┐  │    └─────┬─────┘ │
+│         │            │  │   H2 Database      │  │          │       │
+│         │            │  │   (File-based)     │  │          │       │
+│         │            │  └────────────────────┘  │          ▼       │
+│         │            └──────────────────────────┘    Dell GenAI    │
+└─────────│───────────────────────│────────────────────────API───────┘
+          │                       │
+          ▼                       ▼
+    localhost:4200          localhost:8080
 ```
 
 ---

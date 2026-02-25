@@ -74,6 +74,83 @@ export interface MonthlyStockDetail {
   investedAmount: number;
 }
 
+export interface Dividend {
+  id?: number;
+  symbol: string;
+  isin?: string;
+  exDate?: string;
+  quantity?: number;
+  dividendPerShare?: number;
+  netDividendAmount?: number;
+  fy?: string;
+}
+
+export interface RealizedPnL {
+  id?: number;
+  symbol: string;
+  isin?: string;
+  quantity?: number;
+  buyValue?: number;
+  sellValue?: number;
+  realizedPnl?: number;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatRequest {
+  message: string;
+  model?: string;
+  history?: ChatMessage[];
+}
+
+export interface ChatResponse {
+  message: string;
+  model: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface Instrument {
+  id: number;
+  exchange: string;
+  exchangeToken: string;
+  tradingSymbol: string;
+  growwSymbol: string;
+  name: string;
+  instrumentType: string;
+  segment: string;
+  series: string;
+  isin: string;
+  lotSize: number;
+  tickSize: number;
+}
+
+export interface WatchList {
+  id: number;
+  name: string;
+  description: string;
+  instruments: Instrument[];
+}
+
+export interface InstrumentStatus {
+  totalInstruments: number;
+  nseCashCount: number;
+  lastRefreshTime: string;
+  isLoaded: boolean;
+}
+
+export interface RefreshResult {
+  success: boolean;
+  totalInstruments?: number;
+  nseCashCount?: number;
+  durationMs?: number;
+  refreshTime?: string;
+  error?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -171,5 +248,153 @@ export class ApiService {
     params = params.set('month', month.toString());
     if (company) params = params.set('company', company);
     return this.http.get<MonthlyStockDetail[]>(`${this.baseUrl}/analytics/monthly/details`, { params });
+  }
+
+  // Dividends
+  getDividends(): Observable<Dividend[]> {
+    return this.http.get<Dividend[]>(`${this.baseUrl}/dividends`);
+  }
+
+  createDividend(dividend: Dividend): Observable<Dividend> {
+    return this.http.post<Dividend>(`${this.baseUrl}/dividends`, dividend);
+  }
+
+  updateDividend(id: number, dividend: Dividend): Observable<Dividend> {
+    return this.http.put<Dividend>(`${this.baseUrl}/dividends/${id}`, dividend);
+  }
+
+  deleteDividend(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/dividends/${id}`);
+  }
+
+  getDividendSymbols(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.baseUrl}/dividends/symbols`);
+  }
+
+  getDividendFyList(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.baseUrl}/dividends/fy`);
+  }
+
+  // Realized P&L
+  getRealizedPnL(): Observable<RealizedPnL[]> {
+    return this.http.get<RealizedPnL[]>(`${this.baseUrl}/realized-pnl`);
+  }
+
+  createRealizedPnL(record: RealizedPnL): Observable<RealizedPnL> {
+    return this.http.post<RealizedPnL>(`${this.baseUrl}/realized-pnl`, record);
+  }
+
+  updateRealizedPnL(id: number, record: RealizedPnL): Observable<RealizedPnL> {
+    return this.http.put<RealizedPnL>(`${this.baseUrl}/realized-pnl/${id}`, record);
+  }
+
+  deleteRealizedPnL(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/realized-pnl/${id}`);
+  }
+
+  getRealizedPnLSymbols(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.baseUrl}/realized-pnl/symbols`);
+  }
+
+  // Chat
+  sendChatMessage(request: ChatRequest): Observable<ChatResponse> {
+    return this.http.post<ChatResponse>(`${this.baseUrl}/chat`, request);
+  }
+
+  getChatModels(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.baseUrl}/chat/models`);
+  }
+
+  getChatContext(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/chat/context`);
+  }
+
+  // Instruments
+  getInstruments(): Observable<Instrument[]> {
+    return this.http.get<Instrument[]>(`${this.baseUrl}/instruments`);
+  }
+
+  getNseCashInstruments(): Observable<Instrument[]> {
+    return this.http.get<Instrument[]>(`${this.baseUrl}/instruments/nse-cash`);
+  }
+
+  searchInstruments(query: string): Observable<Instrument[]> {
+    return this.http.get<Instrument[]>(`${this.baseUrl}/instruments/search`, {
+      params: { q: query }
+    });
+  }
+
+  getInstrumentById(id: number): Observable<Instrument> {
+    return this.http.get<Instrument>(`${this.baseUrl}/instruments/${id}`);
+  }
+
+  getInstrumentBySymbol(symbol: string): Observable<Instrument> {
+    return this.http.get<Instrument>(`${this.baseUrl}/instruments/symbol/${symbol}`);
+  }
+
+  refreshInstruments(): Observable<RefreshResult> {
+    return this.http.post<RefreshResult>(`${this.baseUrl}/instruments/refresh`, {});
+  }
+
+  getInstrumentStatus(): Observable<InstrumentStatus> {
+    return this.http.get<InstrumentStatus>(`${this.baseUrl}/instruments/status`);
+  }
+
+  // Watch Lists
+  getWatchLists(): Observable<WatchList[]> {
+    return this.http.get<WatchList[]>(`${this.baseUrl}/watchlists`);
+  }
+
+  getWatchListById(id: number): Observable<WatchList> {
+    return this.http.get<WatchList>(`${this.baseUrl}/watchlists/${id}`);
+  }
+
+  createWatchList(name: string, description?: string): Observable<WatchList> {
+    return this.http.post<WatchList>(`${this.baseUrl}/watchlists`, { name, description });
+  }
+
+  updateWatchList(id: number, name: string, description?: string): Observable<WatchList> {
+    return this.http.put<WatchList>(`${this.baseUrl}/watchlists/${id}`, { name, description });
+  }
+
+  deleteWatchList(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/watchlists/${id}`);
+  }
+
+  addInstrumentToWatchList(watchListId: number, instrumentId: number): Observable<WatchList> {
+    return this.http.post<WatchList>(`${this.baseUrl}/watchlists/${watchListId}/instruments/${instrumentId}`, {});
+  }
+
+  addInstrumentBySymbol(watchListId: number, symbol: string): Observable<WatchList> {
+    return this.http.post<WatchList>(`${this.baseUrl}/watchlists/${watchListId}/instruments/symbol/${symbol}`, {});
+  }
+
+  removeInstrumentFromWatchList(watchListId: number, instrumentId: number): Observable<WatchList> {
+    return this.http.delete<WatchList>(`${this.baseUrl}/watchlists/${watchListId}/instruments/${instrumentId}`);
+  }
+
+  addMultipleInstrumentsToWatchList(watchListId: number, instrumentIds: number[]): Observable<WatchList> {
+    return this.http.post<WatchList>(`${this.baseUrl}/watchlists/${watchListId}/instruments`, instrumentIds);
+  }
+
+  // Dashboard
+  getDashboardSummary(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/dashboard/summary`);
+  }
+
+  getDashboardNews(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/dashboard/news`);
+  }
+
+  getDashboardInsights(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/dashboard/insights`);
+  }
+
+  getDashboardWatchlist(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/dashboard/watchlist`);
+  }
+
+  refreshDashboard(): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/dashboard/refresh`, {});
   }
 }

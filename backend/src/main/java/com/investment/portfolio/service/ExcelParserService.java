@@ -1,8 +1,12 @@
 package com.investment.portfolio.service;
 
 import com.investment.portfolio.dto.UploadResultDTO;
+import com.investment.portfolio.entity.Dividend;
 import com.investment.portfolio.entity.PurchaseDateWise;
+import com.investment.portfolio.entity.RealizedPnL;
+import com.investment.portfolio.repository.DividendRepository;
 import com.investment.portfolio.repository.PurchaseDateWiseRepository;
+import com.investment.portfolio.repository.RealizedPnLRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -17,6 +21,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class ExcelParserService {
@@ -25,115 +30,261 @@ public class ExcelParserService {
 
     private final PurchaseDateWiseRepository purchaseRepo;
     private final AggregationService aggregationService;
+    private final DividendRepository dividendRepo;
+    private final RealizedPnLRepository realizedPnLRepo;
 
-    public ExcelParserService(PurchaseDateWiseRepository purchaseRepo, AggregationService aggregationService) {
+    public ExcelParserService(PurchaseDateWiseRepository purchaseRepo, AggregationService aggregationService,
+                              DividendRepository dividendRepo, RealizedPnLRepository realizedPnLRepo) {
         this.purchaseRepo = purchaseRepo;
         this.aggregationService = aggregationService;
+        this.dividendRepo = dividendRepo;
+        this.realizedPnLRepo = realizedPnLRepo;
     }
 
     public UploadResultDTO parseAndStore(MultipartFile file) throws Exception {
+        return parseAndStore(file, null);
+    }
+
+    public UploadResultDTO parseAndStore(MultipartFile file, Set<String> selectedSheets) throws Exception {
         int totalRows = 0;
         int successRows = 0;
         int failedRows = 0;
         List<PurchaseDateWise> records = new ArrayList<>();
 
+        boolean importPurchase = selectedSheets == null || selectedSheets.stream()
+                .anyMatch(s -> s.equalsIgnoreCase("Purchase Date Wise"));
+        boolean importDividend = selectedSheets == null || selectedSheets.stream()
+                .anyMatch(s -> s.equalsIgnoreCase("Dividend"));
+        boolean importPnL = selectedSheets == null || selectedSheets.stream()
+                .anyMatch(s -> s.equalsIgnoreCase("RealizedP&L"));
+
         try (InputStream is = file.getInputStream();
              Workbook workbook = new XSSFWorkbook(is)) {
 
-            Sheet sheet = workbook.getSheet("Purchase Date Wise");
-            if (sheet == null) {
-                // Try case-insensitive search
-                for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
-                    if (workbook.getSheetName(i).trim().equalsIgnoreCase("Purchase Date Wise")) {
-                        sheet = workbook.getSheetAt(i);
-                        break;
+            if (importPurchase) {
+                Sheet sheet = findSheet(workbook, "Purchase Date Wise");
+                if (sheet == null) {
+                    throw new RuntimeException("Worksheet 'Purchase Date Wise' not found in the uploaded file.");
+                }
+
+                Row headerRow = sheet.getRow(0);
+                if (headerRow == null) throw new RuntimeException("Header row is empty.");
+
+                int dateCol = -1, companyCol = -1, qtyCol = -1, priceCol = -1, investmentCol = -1;
+                for (int c = 0; c < headerRow.getLastCellNum(); c++) {
+                    Cell cell = headerRow.getCell(c);
+                    if (cell == null) continue;
+                    String header = cell.getStringCellValue().trim().toLowerCase();
+                    switch (header) {
+                        case "date" -> dateCol = c;
+                        case "company" -> companyCol = c;
+                        case "quantity" -> qtyCol = c;
+                        case "price" -> priceCol = c;
+                        case "investment" -> investmentCol = c;
                     }
                 }
-            }
 
-            if (sheet == null) {
-                throw new RuntimeException("Worksheet 'Purchase Date Wise' not found in the uploaded file.");
-            }
-
-            // Find header row and column indices
-            Row headerRow = sheet.getRow(0);
-            if (headerRow == null) {
-                throw new RuntimeException("Header row is empty.");
-            }
-
-            int dateCol = -1, companyCol = -1, qtyCol = -1, priceCol = -1, investmentCol = -1;
-
-            for (int c = 0; c < headerRow.getLastCellNum(); c++) {
-                Cell cell = headerRow.getCell(c);
-                if (cell == null) continue;
-                String header = cell.getStringCellValue().trim().toLowerCase();
-                switch (header) {
-                    case "date" -> dateCol = c;
-                    case "company" -> companyCol = c;
-                    case "quantity" -> qtyCol = c;
-                    case "price" -> priceCol = c;
-                    case "investment" -> investmentCol = c;
+                if (dateCol == -1 || companyCol == -1 || qtyCol == -1 || priceCol == -1 || investmentCol == -1) {
+                    throw new RuntimeException("Missing required columns. Expected: Date, Company, Quantity, Price, Investment");
                 }
-            }
 
-            if (dateCol == -1 || companyCol == -1 || qtyCol == -1 || priceCol == -1 || investmentCol == -1) {
-                throw new RuntimeException("Missing required columns. Expected: Date, Company, Quantity, Price, Investment");
-            }
+                purchaseRepo.deleteAll();
 
-            // Clear existing data (replace strategy)
-            purchaseRepo.deleteAll();
+                for (int r = 1; r <= sheet.getLastRowNum(); r++) {
+                    Row row = sheet.getRow(r);
+                    if (row == null) continue;
+                    totalRows++;
+                    try {
+                        LocalDate date = parseDate(row.getCell(dateCol));
+                        String company = parseCellAsString(row.getCell(companyCol));
+                        Double quantity = parseCellAsDouble(row.getCell(qtyCol));
+                        Double price = parseCellAsDouble(row.getCell(priceCol));
+                        Double investment = parseCellAsDouble(row.getCell(investmentCol));
 
-            for (int r = 1; r <= sheet.getLastRowNum(); r++) {
-                Row row = sheet.getRow(r);
-                if (row == null) continue;
-
-                totalRows++;
-
-                try {
-                    LocalDate date = parseDate(row.getCell(dateCol));
-                    String company = parseCellAsString(row.getCell(companyCol));
-                    Double quantity = parseCellAsDouble(row.getCell(qtyCol));
-                    Double price = parseCellAsDouble(row.getCell(priceCol));
-                    Double investment = parseCellAsDouble(row.getCell(investmentCol));
-
-                    if (date == null || company == null || company.isBlank() || quantity == null || price == null || investment == null) {
-                        log.warn("Row {} skipped - date:{} company:{} qty:{} price:{} inv:{}",
-                                r, date, company, quantity, price, investment);
-                        if (r <= 3) {
-                            Cell dc = row.getCell(dateCol);
-                            Cell cc = row.getCell(companyCol);
-                            Cell qc = row.getCell(qtyCol);
-                            Cell pc = row.getCell(priceCol);
-                            Cell ic = row.getCell(investmentCol);
-                            log.warn("  Cell types - date:{} company:{} qty:{} price:{} inv:{}",
-                                    dc != null ? dc.getCellType() : "null",
-                                    cc != null ? cc.getCellType() : "null",
-                                    qc != null ? qc.getCellType() : "null",
-                                    pc != null ? pc.getCellType() : "null",
-                                    ic != null ? ic.getCellType() : "null");
+                        if (date == null || company == null || company.isBlank() || quantity == null || price == null || investment == null) {
+                            log.warn("Row {} skipped - date:{} company:{} qty:{} price:{} inv:{}",
+                                    r, date, company, quantity, price, investment);
+                            failedRows++;
+                            continue;
                         }
+                        records.add(new PurchaseDateWise(date, company.trim(), quantity, price, investment));
+                        successRows++;
+                    } catch (Exception e) {
+                        log.error("Row {} exception: {}", r, e.getMessage());
                         failedRows++;
-                        continue;
                     }
-
-                    records.add(new PurchaseDateWise(date, company.trim(), quantity, price, investment));
-                    successRows++;
-                } catch (Exception e) {
-                    log.error("Row {} exception: {}", r, e.getMessage());
-                    failedRows++;
                 }
+
+                if (!records.isEmpty()) purchaseRepo.saveAll(records);
+                aggregationService.rebuildAggregation();
+            } else {
+                log.info("Skipping 'Purchase Date Wise' sheet (not selected)");
             }
 
-            if (!records.isEmpty()) {
-                purchaseRepo.saveAll(records);
+            // Parse Dividend sheet
+            if (importDividend) {
+                int[] dividendResult = parseDividendSheet(workbook);
+                totalRows += dividendResult[0];
+                successRows += dividendResult[1];
+                failedRows += dividendResult[2];
+            } else {
+                log.info("Skipping 'Dividend' sheet (not selected)");
             }
 
-            // Rebuild aggregation
-            aggregationService.rebuildAggregation();
+            // Parse RealizedP&L sheet
+            if (importPnL) {
+                int[] pnlResult = parseRealizedPnLSheet(workbook);
+                totalRows += pnlResult[0];
+                successRows += pnlResult[1];
+                failedRows += pnlResult[2];
+            } else {
+                log.info("Skipping 'RealizedP&L' sheet (not selected)");
+            }
         }
 
         return new UploadResultDTO(totalRows, successRows, failedRows,
                 "Upload complete. " + successRows + " rows imported, " + failedRows + " rows skipped.");
+    }
+
+    private int[] parseDividendSheet(Workbook workbook) {
+        int total = 0, success = 0, failed = 0;
+        Sheet sheet = findSheet(workbook, "Dividend");
+        if (sheet == null) {
+            log.info("No 'Dividend' sheet found, skipping.");
+            return new int[]{0, 0, 0};
+        }
+
+        Row headerRow = sheet.getRow(0);
+        if (headerRow == null) return new int[]{0, 0, 0};
+
+        int symbolCol = -1, isinCol = -1, exDateCol = -1, qtyCol = -1,
+                dpsCol = -1, netAmtCol = -1, fyCol = -1;
+
+        for (int c = 0; c < headerRow.getLastCellNum(); c++) {
+            Cell cell = headerRow.getCell(c);
+            if (cell == null) continue;
+            String h = cell.getStringCellValue().trim().toLowerCase();
+            switch (h) {
+                case "symbol" -> symbolCol = c;
+                case "isin" -> isinCol = c;
+                case "ex-date" -> exDateCol = c;
+                case "quantity" -> qtyCol = c;
+                case "dividend per share" -> dpsCol = c;
+                case "net dividend amount" -> netAmtCol = c;
+                case "fy" -> fyCol = c;
+            }
+        }
+
+        dividendRepo.deleteAll();
+        List<Dividend> records = new ArrayList<>();
+
+        for (int r = 1; r <= sheet.getLastRowNum(); r++) {
+            Row row = sheet.getRow(r);
+            if (row == null) continue;
+            total++;
+            try {
+                String symbol = parseCellAsString(symbolCol >= 0 ? row.getCell(symbolCol) : null);
+                if (symbol == null || symbol.isBlank()) { failed++; continue; }
+
+                String isin = parseCellAsString(isinCol >= 0 ? row.getCell(isinCol) : null);
+                LocalDate exDate = exDateCol >= 0 ? parseDateFlexible(row.getCell(exDateCol)) : null;
+                Double qty = qtyCol >= 0 ? parseCellAsDouble(row.getCell(qtyCol)) : null;
+                Double dps = dpsCol >= 0 ? parseCellAsDouble(row.getCell(dpsCol)) : null;
+                Double netAmt = netAmtCol >= 0 ? parseCellAsDouble(row.getCell(netAmtCol)) : null;
+                String fy = fyCol >= 0 ? parseCellAsString(row.getCell(fyCol)) : null;
+
+                records.add(new Dividend(symbol.trim(), isin, exDate, qty, dps, netAmt, fy));
+                success++;
+            } catch (Exception e) {
+                log.error("Dividend row {} error: {}", r, e.getMessage());
+                failed++;
+            }
+        }
+
+        if (!records.isEmpty()) dividendRepo.saveAll(records);
+        log.info("Dividend sheet: {} total, {} success, {} failed", total, success, failed);
+        return new int[]{total, success, failed};
+    }
+
+    private int[] parseRealizedPnLSheet(Workbook workbook) {
+        int total = 0, success = 0, failed = 0;
+        Sheet sheet = findSheet(workbook, "RealizedP&L");
+        if (sheet == null) {
+            log.info("No 'RealizedP&L' sheet found, skipping.");
+            return new int[]{0, 0, 0};
+        }
+
+        Row headerRow = sheet.getRow(0);
+        if (headerRow == null) return new int[]{0, 0, 0};
+
+        int symbolCol = -1, isinCol = -1, qtyCol = -1,
+                buyCol = -1, sellCol = -1, pnlCol = -1;
+
+        for (int c = 0; c < headerRow.getLastCellNum(); c++) {
+            Cell cell = headerRow.getCell(c);
+            if (cell == null) continue;
+            String h = cell.getStringCellValue().trim().toLowerCase();
+            switch (h) {
+                case "symbol" -> symbolCol = c;
+                case "isin" -> isinCol = c;
+                case "quantity" -> qtyCol = c;
+                case "buy value" -> buyCol = c;
+                case "sell value" -> sellCol = c;
+                case "realized p&l" -> pnlCol = c;
+            }
+        }
+
+        realizedPnLRepo.deleteAll();
+        List<RealizedPnL> records = new ArrayList<>();
+
+        for (int r = 1; r <= sheet.getLastRowNum(); r++) {
+            Row row = sheet.getRow(r);
+            if (row == null) continue;
+            total++;
+            try {
+                String symbol = parseCellAsString(symbolCol >= 0 ? row.getCell(symbolCol) : null);
+                if (symbol == null || symbol.isBlank()) { failed++; continue; }
+
+                String isin = parseCellAsString(isinCol >= 0 ? row.getCell(isinCol) : null);
+                Double qty = qtyCol >= 0 ? parseCellAsDouble(row.getCell(qtyCol)) : null;
+                Double buyVal = buyCol >= 0 ? parseCellAsDouble(row.getCell(buyCol)) : null;
+                Double sellVal = sellCol >= 0 ? parseCellAsDouble(row.getCell(sellCol)) : null;
+                Double pnl = pnlCol >= 0 ? parseCellAsDouble(row.getCell(pnlCol)) : null;
+
+                records.add(new RealizedPnL(symbol.trim(), isin, qty, buyVal, sellVal, pnl));
+                success++;
+            } catch (Exception e) {
+                log.error("RealizedPnL row {} error: {}", r, e.getMessage());
+                failed++;
+            }
+        }
+
+        if (!records.isEmpty()) realizedPnLRepo.saveAll(records);
+        log.info("RealizedP&L sheet: {} total, {} success, {} failed", total, success, failed);
+        return new int[]{total, success, failed};
+    }
+
+    private Sheet findSheet(Workbook workbook, String name) {
+        Sheet sheet = workbook.getSheet(name);
+        if (sheet != null) return sheet;
+        for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+            if (workbook.getSheetName(i).trim().equalsIgnoreCase(name)) {
+                return workbook.getSheetAt(i);
+            }
+        }
+        return null;
+    }
+
+    private LocalDate parseDateFlexible(Cell cell) {
+        if (cell == null) return null;
+        LocalDate d = parseDate(cell);
+        if (d != null) return d;
+        // Try string "yyyy-MM-dd"
+        try {
+            String s = cell.getStringCellValue().trim();
+            if (!s.isBlank()) return LocalDate.parse(s);
+        } catch (Exception ignored) {}
+        return null;
     }
 
     private LocalDate parseDate(Cell cell) {

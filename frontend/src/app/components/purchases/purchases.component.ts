@@ -1,4 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { ApiService, PurchaseDateWise } from '../../services/api.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
@@ -6,6 +7,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { PurchaseDialogComponent } from './purchase-dialog.component';
+import { DeleteTablesDialogComponent } from './delete-tables-dialog.component';
 
 @Component({
   selector: 'app-purchases',
@@ -19,8 +21,12 @@ export class PurchasesComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
+  syncing = false;
+  private readonly DATA_API_URL = 'http://localhost:8080/api/data';
+
   constructor(
     private api: ApiService,
+    private http: HttpClient,
     private snackBar: MatSnackBar,
     private dialog: MatDialog
   ) {}
@@ -95,5 +101,38 @@ export class PurchasesComponent implements OnInit {
         error: () => this.snackBar.open('Failed to delete', 'Close', { duration: 3000 })
       });
     }
+  }
+
+  syncAllTables(): void {
+    this.syncing = true;
+    this.http.post<any>(`${this.DATA_API_URL}/sync`, {}).subscribe({
+      next: (result) => {
+        this.syncing = false;
+        this.snackBar.open(
+          `Synced: ${result.companyWiseRecords} company records from ${result.purchaseRecords} purchases`,
+          'Close',
+          { duration: 4000 }
+        );
+      },
+      error: (err) => {
+        this.syncing = false;
+        this.snackBar.open(err.error?.message || 'Sync failed', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  openDeleteDialog(): void {
+    const dialogRef = this.dialog.open(DeleteTablesDialogComponent, {
+      width: '450px'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.success) {
+        this.snackBar.open('Selected tables cleared successfully', 'Close', { duration: 3000 });
+        this.loadData();
+      } else if (result?.error) {
+        this.snackBar.open(result.error, 'Close', { duration: 3000 });
+      }
+    });
   }
 }

@@ -1,0 +1,149 @@
+<div class="page-container">
+  <mat-card class="header-card">
+    <div class="header-row">
+      <div class="title-section">
+        <h2><mat-icon>candlestick_chart</mat-icon> Live Stock Data</h2>
+        <p class="subtitle">Search NSE stocks for real-time market data</p>
+      </div>
+    </div>
+
+    <div class="search-section">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Enter Stock Symbol</mat-label>
+        <input matInput
+               [(ngModel)]="searchQuery"
+               placeholder="e.g. RELIANCE, TCS, INFY"
+               (keyup.enter)="searchStock()"
+               [disabled]="!apiAvailable">
+        <mat-icon matPrefix>search</mat-icon>
+      </mat-form-field>
+      <button mat-raised-button color="primary"
+              (click)="searchStock()"
+              [disabled]="!searchQuery.trim() || loading || !apiAvailable">
+        <mat-icon>{{ loading ? 'hourglass_empty' : 'search' }}</mat-icon>
+        {{ loading ? 'Searching...' : 'Search' }}
+      </button>
+    </div>
+
+    <div class="quick-search" *ngIf="recentSearches.length > 0">
+      <span class="label">Recent:</span>
+      <button mat-stroked-button *ngFor="let sym of recentSearches" (click)="quickSearch(sym)" class="quick-btn">
+        {{ sym }}
+      </button>
+    </div>
+
+    <div class="popular-stocks">
+      <span class="label">Popular:</span>
+      <button mat-stroked-button (click)="quickSearch('RELIANCE')" class="quick-btn">RELIANCE</button>
+      <button mat-stroked-button (click)="quickSearch('TCS')" class="quick-btn">TCS</button>
+      <button mat-stroked-button (click)="quickSearch('INFY')" class="quick-btn">INFY</button>
+      <button mat-stroked-button (click)="quickSearch('HDFCBANK')" class="quick-btn">HDFCBANK</button>
+      <button mat-stroked-button (click)="quickSearch('ICICIBANK')" class="quick-btn">ICICIBANK</button>
+    </div>
+  </mat-card>
+
+  <div class="error-card" *ngIf="error && !loading">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ error }}</span>
+  </div>
+
+  <div class="loading-card" *ngIf="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <span>Fetching live data for {{ searchQuery.toUpperCase() }}...</span>
+  </div>
+
+  <mat-card class="stock-card" *ngIf="stockData && !loading">
+    <div class="stock-header">
+      <div class="stock-title">
+        <h3>{{ stockData.symbol }}</h3>
+        <span class="exchange-badge">{{ stockData.exchange }}</span>
+      </div>
+      <button mat-icon-button (click)="refresh()" matTooltip="Refresh">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+
+    <div class="price-section">
+      <div class="current-price">{{ formatCurrency(stockData.last_price) }}</div>
+      <div class="price-change" [class.positive]="(stockData?.day_change ?? 0) >= 0" [class.negative]="(stockData?.day_change ?? 0) < 0">
+        <mat-icon>{{ (stockData?.day_change ?? 0) >= 0 ? 'trending_up' : 'trending_down' }}</mat-icon>
+        {{ formatCurrency(stockData?.day_change) }}
+        ({{ (stockData?.day_change_perc ?? 0) >= 0 ? '+' : '' }}{{ (stockData?.day_change_perc ?? 0).toFixed(2) }}%)
+      </div>
+    </div>
+
+    <div class="data-grid">
+      <div class="data-section">
+        <h4><mat-icon>show_chart</mat-icon> OHLC (Today)</h4>
+        <div class="data-row">
+          <span class="label">Open</span>
+          <span class="value">{{ formatCurrency(stockData.ohlc?.open) }}</span>
+        </div>
+        <div class="data-row">
+          <span class="label">High</span>
+          <span class="value highlight-high">{{ formatCurrency(stockData.ohlc?.high) }}</span>
+        </div>
+        <div class="data-row">
+          <span class="label">Low</span>
+          <span class="value highlight-low">{{ formatCurrency(stockData.ohlc?.low) }}</span>
+        </div>
+        <div class="data-row">
+          <span class="label">Prev Close</span>
+          <span class="value">{{ formatCurrency(stockData.ohlc?.close) }}</span>
+        </div>
+      </div>
+
+      <div class="data-section">
+        <h4><mat-icon>swap_vert</mat-icon> Bid / Offer</h4>
+        <div class="data-row">
+          <span class="label">Bid Price</span>
+          <span class="value">{{ formatCurrency(stockData.bid_price) }}</span>
+        </div>
+        <div class="data-row">
+          <span class="label">Offer Price</span>
+          <span class="value">{{ formatCurrency(stockData.offer_price) }}</span>
+        </div>
+        <div class="data-row">
+          <span class="label">Total Buy Qty</span>
+          <span class="value">{{ formatNumber(stockData.total_buy_quantity) }}</span>
+        </div>
+        <div class="data-row">
+          <span class="label">Total Sell Qty</span>
+          <span class="value">{{ formatNumber(stockData.total_sell_quantity) }}</span>
+        </div>
+      </div>
+
+      <div class="data-section">
+        <h4><mat-icon>date_range</mat-icon> 52 Week Range</h4>
+        <div class="data-row">
+          <span class="label">52W High</span>
+          <span class="value highlight-high">{{ formatCurrency(stockData.week_52_high) }}</span>
+        </div>
+        <div class="data-row">
+          <span class="label">52W Low</span>
+          <span class="value highlight-low">{{ formatCurrency(stockData.week_52_low) }}</span>
+        </div>
+        <div class="data-row">
+          <span class="label">Upper Circuit</span>
+          <span class="value">{{ formatCurrency(stockData.upper_circuit_limit) }}</span>
+        </div>
+        <div class="data-row">
+          <span class="label">Lower Circuit</span>
+          <span class="value">{{ formatCurrency(stockData.lower_circuit_limit) }}</span>
+        </div>
+      </div>
+
+      <div class="data-section">
+        <h4><mat-icon>bar_chart</mat-icon> Volume & Market Cap</h4>
+        <div class="data-row">
+          <span class="label">Volume</span>
+          <span class="value">{{ formatNumber(stockData.volume) }}</span>
+        </div>
+        <div class="data-row">
+          <span class="label">Market Cap</span>
+          <span class="value">{{ formatMarketCap(stockData.market_cap) }}</span>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+</div>

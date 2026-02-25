@@ -2,6 +2,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 }
 
 .filter-field {

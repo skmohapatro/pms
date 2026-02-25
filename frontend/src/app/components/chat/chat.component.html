@@ -1,0 +1,96 @@
+<div class="chat-container">
+  <mat-card class="chat-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>smart_toy</mat-icon>
+        Portfolio Assistant
+      </mat-card-title>
+      <div class="header-actions">
+        <mat-form-field appearance="outline" class="model-select">
+          <mat-label>AI Model</mat-label>
+          <mat-select [(value)]="selectedModel">
+            <mat-option *ngFor="let model of availableModels" [value]="model">
+              {{ model }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <button mat-icon-button (click)="clearChat()" matTooltip="Clear chat">
+          <mat-icon>delete_outline</mat-icon>
+        </button>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="portfolio-summary" *ngIf="portfolioSummary">
+        <span class="summary-item">
+          <mat-icon>business</mat-icon>
+          {{ portfolioSummary.totalCompanies || 0 }} Companies
+        </span>
+        <span class="summary-item">
+          <mat-icon>receipt_long</mat-icon>
+          {{ portfolioSummary.totalPurchases || 0 }} Purchases
+        </span>
+        <span class="summary-item">
+          <mat-icon>account_balance_wallet</mat-icon>
+          ₹{{ (portfolioSummary.totalInvestment || 0) | number:'1.2-2' }}
+        </span>
+      </div>
+
+      <div class="messages-container" #chatContainer>
+        <div *ngFor="let msg of messages" 
+             class="message" 
+             [ngClass]="{'user-message': msg.role === 'user', 'assistant-message': msg.role === 'assistant'}">
+          <div class="message-avatar">
+            <mat-icon *ngIf="msg.role === 'user'">person</mat-icon>
+            <mat-icon *ngIf="msg.role === 'assistant'">smart_toy</mat-icon>
+          </div>
+          <div class="message-content">
+            <div class="message-bubble">
+              <mat-spinner *ngIf="msg.isLoading" diameter="24"></mat-spinner>
+              <div *ngIf="!msg.isLoading" [innerHTML]="formatMessage(msg.content)"></div>
+            </div>
+            <span class="message-time">{{ msg.timestamp | date:'shortTime' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="suggestions" *ngIf="messages.length <= 1">
+        <p class="suggestions-label">Try asking:</p>
+        <div class="suggestion-chips">
+          <button mat-stroked-button 
+                  *ngFor="let query of suggestedQueries.slice(0, 4)" 
+                  (click)="useSuggestion(query)"
+                  class="suggestion-chip">
+            {{ query }}
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <div class="input-container">
+        <mat-form-field appearance="outline" class="message-input">
+          <mat-label>Ask about your portfolio...</mat-label>
+          <textarea matInput
+                    #messageInput
+                    [(ngModel)]="userInput"
+                    (keypress)="onKeyPress($event)"
+                    [disabled]="isLoading"
+                    rows="2"
+                    cdkTextareaAutosize
+                    cdkAutosizeMinRows="2"
+                    cdkAutosizeMaxRows="6"
+                    placeholder="Ask about your portfolio...">
+          </textarea>
+        </mat-form-field>
+        <button mat-fab 
+                color="primary" 
+                (click)="sendMessage()" 
+                [disabled]="!userInput.trim() || isLoading"
+                class="send-button">
+          <mat-icon>send</mat-icon>
+        </button>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+</div>

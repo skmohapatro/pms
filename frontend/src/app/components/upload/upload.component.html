@@ -3,34 +3,102 @@
 
   <mat-card>
     <mat-card-content>
+
+      <!-- File Picker -->
       <div class="upload-area">
         <input type="file" accept=".xlsx,.xls" (change)="onFileSelected($event)" #fileInput hidden>
         <button mat-raised-button color="primary" (click)="fileInput.click()">
           <mat-icon>cloud_upload</mat-icon>
           Choose Excel File
         </button>
-        <span class="file-name" *ngIf="selectedFile">{{ selectedFile.name }}</span>
+        <span class="file-name" *ngIf="selectedFile">
+          <mat-icon class="file-icon">description</mat-icon>
+          {{ selectedFile.name }}
+        </span>
       </div>
 
-      <div class="upload-actions" *ngIf="selectedFile">
-        <button mat-raised-button color="accent" (click)="upload()" [disabled]="uploading">
+      <!-- Sheet Detection Spinner -->
+      <div class="detecting-sheets" *ngIf="detectingSheets">
+        <mat-spinner diameter="24"></mat-spinner>
+        <span>Detecting sheets...</span>
+      </div>
+
+      <!-- Sheet Selection -->
+      <div class="sheet-selection" *ngIf="sheetOptions.length > 0 && !detectingSheets">
+        <div class="sheet-selection-header">
+          <mat-icon>table_chart</mat-icon>
+          <span>Select sheets to import</span>
+          <mat-checkbox
+            [checked]="allSelected"
+            [indeterminate]="someSelected"
+            (change)="toggleAll($event.checked)"
+            class="select-all-checkbox">
+            Select All
+          </mat-checkbox>
+        </div>
+
+        <div class="sheet-list">
+          <div class="sheet-item" *ngFor="let sheet of sheetOptions"
+               [class.selected]="sheet.selected"
+               (click)="sheet.selected = !sheet.selected">
+            <mat-checkbox
+              [(ngModel)]="sheet.selected"
+              (click)="$event.stopPropagation()"
+              color="primary">
+            </mat-checkbox>
+            <div class="sheet-info">
+              <span class="sheet-name">{{ sheet.name }}</span>
+              <span class="sheet-desc">{{ sheet.description }}</span>
+            </div>
+            <mat-icon class="sheet-check" *ngIf="sheet.selected">check_circle</mat-icon>
+          </div>
+        </div>
+
+        <div class="selection-summary" *ngIf="selectedSheets.length > 0">
+          <mat-icon>info_outline</mat-icon>
+          {{ selectedSheets.length }} of {{ sheetOptions.length }} sheet(s) selected for import
+        </div>
+        <div class="selection-warning" *ngIf="selectedSheets.length === 0">
+          <mat-icon>warning</mat-icon>
+          Please select at least one sheet to import
+        </div>
+      </div>
+
+      <!-- Upload Button -->
+      <div class="upload-actions" *ngIf="selectedFile && !detectingSheets">
+        <button mat-raised-button color="accent" (click)="upload()" [disabled]="!canUpload">
           <mat-icon>publish</mat-icon>
           {{ uploading ? 'Uploading...' : 'Upload & Import' }}
         </button>
-        <mat-progress-bar *ngIf="uploading" mode="indeterminate"></mat-progress-bar>
+        <mat-progress-bar *ngIf="uploading" mode="indeterminate" class="upload-progress"></mat-progress-bar>
       </div>
 
+      <!-- Result -->
       <mat-card *ngIf="result" class="result-card">
         <mat-card-header>
-          <mat-card-title>Upload Result</mat-card-title>
+          <mat-card-title>
+            <mat-icon>check_circle</mat-icon> Upload Result
+          </mat-card-title>
         </mat-card-header>
         <mat-card-content>
-          <p><strong>Total Rows:</strong> {{ result.totalRows }}</p>
-          <p><strong>Imported:</strong> {{ result.successRows }}</p>
-          <p><strong>Skipped:</strong> {{ result.failedRows }}</p>
-          <p><strong>Message:</strong> {{ result.message }}</p>
+          <div class="result-grid">
+            <div class="result-item">
+              <span class="result-label">Total Rows</span>
+              <span class="result-value">{{ result.totalRows }}</span>
+            </div>
+            <div class="result-item success">
+              <span class="result-label">Imported</span>
+              <span class="result-value">{{ result.successRows }}</span>
+            </div>
+            <div class="result-item warn">
+              <span class="result-label">Skipped</span>
+              <span class="result-value">{{ result.failedRows }}</span>
+            </div>
+          </div>
+          <p class="result-message">{{ result.message }}</p>
         </mat-card-content>
       </mat-card>
+
     </mat-card-content>
   </mat-card>
 
@@ -38,11 +106,16 @@
     <mat-card-content>
       <h3>Instructions</h3>
       <ul>
-        <li>Upload an <strong>.xlsx</strong> file containing your holdings data.</li>
-        <li>The file must have a worksheet named <strong>"Purchase Date Wise"</strong>.</li>
-        <li>Expected columns: <strong>Date, Company, Quantity, Price, Investment</strong>.</li>
-        <li>Uploading will <strong>replace</strong> all existing data and rebuild aggregations.</li>
+        <li>Upload an <strong>.xlsx</strong> file — sheets are auto-detected on file selection.</li>
+        <li><strong>Check or uncheck</strong> each sheet you want to import.</li>
+        <li>Only the selected sheets will be processed; others are skipped.</li>
+        <li>Importing a sheet will <strong>replace</strong> all existing data for that sheet.</li>
       </ul>
+      <div class="sheet-guide">
+        <div class="guide-item"><mat-icon>receipt_long</mat-icon> <strong>Purchase Date Wise</strong> — Date, Company, Quantity, Price, Investment</div>
+        <div class="guide-item"><mat-icon>payments</mat-icon> <strong>Dividend</strong> — Symbol, ISIN, Ex-Date, Quantity, Dividend Per Share, Net Dividend Amount, FY</div>
+        <div class="guide-item"><mat-icon>show_chart</mat-icon> <strong>RealizedP&amp;L</strong> — Symbol, ISIN, Quantity, Buy Value, Sell Value, Realized P&amp;L</div>
+      </div>
     </mat-card-content>
   </mat-card>
 </div>

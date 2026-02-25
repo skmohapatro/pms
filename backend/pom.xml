@@ -56,6 +56,13 @@
             <version>5.2.5</version>
         </dependency>
 
+        <!-- Rome RSS Feed Parser -->
+        <dependency>
+            <groupId>com.rometools</groupId>
+            <artifactId>rome</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

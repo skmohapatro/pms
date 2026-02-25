@@ -1,9 +1,18 @@
 <div class="container">
   <div class="header-row">
     <h2 class="page-title">Purchase Date Wise</h2>
-    <button mat-raised-button color="primary" (click)="openCreateDialog()">
-      <mat-icon>add</mat-icon> Add Transaction
-    </button>
+    <div class="action-buttons">
+      <button mat-raised-button color="accent" (click)="syncAllTables()" [disabled]="syncing">
+        <mat-icon>{{ syncing ? 'hourglass_empty' : 'sync' }}</mat-icon>
+        {{ syncing ? 'Syncing...' : 'Sync Tables' }}
+      </button>
+      <button mat-raised-button color="warn" (click)="openDeleteDialog()">
+        <mat-icon>delete_sweep</mat-icon> Delete Data
+      </button>
+      <button mat-raised-button color="primary" (click)="openCreateDialog()">
+        <mat-icon>add</mat-icon> Add Transaction
+      </button>
+    </div>
   </div>
 
   <mat-form-field appearance="outline" class="filter-field">
