@@ -68,4 +68,35 @@ public class DividendController {
     public List<String> getFyList() {
         return dividendRepo.findDistinctFy();
     }
+
+    @GetMapping("/by-symbol/{symbol}")
+    public ResponseEntity<DividendSummary> getBySymbol(@PathVariable String symbol) {
+        List<Dividend> dividends = dividendRepo.findBySymbol(symbol.toUpperCase());
+        if (dividends.isEmpty()) {
+            return ResponseEntity.ok(new DividendSummary(symbol, 0.0, 0));
+        }
+        double totalDividend = dividends.stream()
+                .mapToDouble(d -> d.getNetDividendAmount() != null ? d.getNetDividendAmount() : 0.0)
+                .sum();
+        return ResponseEntity.ok(new DividendSummary(symbol, totalDividend, dividends.size()));
+    }
+
+    public static class DividendSummary {
+        private String symbol;
+        private Double totalDividendReceived;
+        private Integer dividendCount;
+
+        public DividendSummary(String symbol, Double totalDividendReceived, Integer dividendCount) {
+            this.symbol = symbol;
+            this.totalDividendReceived = totalDividendReceived;
+            this.dividendCount = dividendCount;
+        }
+
+        public String getSymbol() { return symbol; }
+        public void setSymbol(String symbol) { this.symbol = symbol; }
+        public Double getTotalDividendReceived() { return totalDividendReceived; }
+        public void setTotalDividendReceived(Double totalDividendReceived) { this.totalDividendReceived = totalDividendReceived; }
+        public Integer getDividendCount() { return dividendCount; }
+        public void setDividendCount(Integer dividendCount) { this.dividendCount = dividendCount; }
+    }
 }

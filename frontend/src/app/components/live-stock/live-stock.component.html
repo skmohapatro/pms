@@ -3,7 +3,7 @@
     <div class="header-row">
       <div class="title-section">
         <h2><mat-icon>candlestick_chart</mat-icon> Live Stock Data</h2>
-        <p class="subtitle">Search NSE stocks for real-time market data</p>
+        <p class="subtitle">Search NSE stocks and derivatives for real-time market data</p>
       </div>
     </div>
 
@@ -57,6 +57,7 @@
       <div class="stock-title">
         <h3>{{ stockData.symbol }}</h3>
         <span class="exchange-badge">{{ stockData.exchange }}</span>
+        <span class="segment-badge" *ngIf="stockData.segment">{{ stockData.segment }}</span>
       </div>
       <button mat-icon-button (click)="refresh()" matTooltip="Refresh">
         <mat-icon>refresh</mat-icon>
@@ -142,6 +143,25 @@
         <div class="data-row">
           <span class="label">Market Cap</span>
           <span class="value">{{ formatMarketCap(stockData.market_cap) }}</span>
+        </div>
+      </div>
+
+      <!-- FNO Specific Section -->
+      <div class="data-section" *ngIf="stockData.segment === 'FNO'">
+        <h4><mat-icon>analytics</mat-icon> Derivatives Data</h4>
+        <div class="data-row">
+          <span class="label">Open Interest</span>
+          <span class="value">{{ formatNumber(stockData.open_interest) }}</span>
+        </div>
+        <div class="data-row">
+          <span class="label">OI Change</span>
+          <span class="value" [class.positive]="(stockData?.oi_day_change ?? 0) >= 0" [class.negative]="(stockData?.oi_day_change ?? 0) < 0">
+            {{ formatNumber(stockData.oi_day_change) }} ({{ (stockData?.oi_day_change_percentage ?? 0).toFixed(2) }}%)
+          </span>
+        </div>
+        <div class="data-row">
+          <span class="label">Implied Volatility</span>
+          <span class="value">{{ (stockData?.implied_volatility ?? 0).toFixed(2) }}%</span>
         </div>
       </div>
     </div>

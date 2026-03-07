@@ -19,6 +19,9 @@ export interface StockDetail {
   lower_circuit_limit?: number;
   volume?: number;
   market_cap?: number;
+  dividend_yield?: number;
+  totalDividendReceived?: number;
+  dividendCount?: number;
 }
 
 export interface CompanyWiseWithLive extends CompanyWiseAggregated {
@@ -201,24 +204,29 @@ export class CompanyWiseComponent implements OnInit {
   async fetchStockDetail(row: CompanyWiseWithLive): Promise<void> {
     row.detailLoading = true;
     try {
-      const result = await this.http.get<any>(
-        `${this.CHAT_BACKEND_URL}/api/stock/search?q=${encodeURIComponent(row.instrument)}`
-      ).toPromise();
-      if (result) {
-        row.detail = {
-          ohlc: result.ohlc,
-          bid_price: result.bid_price,
-          offer_price: result.offer_price,
-          total_buy_quantity: result.total_buy_quantity,
-          total_sell_quantity: result.total_sell_quantity,
-          week_52_high: result.week_52_high,
-          week_52_low: result.week_52_low,
-          upper_circuit_limit: result.upper_circuit_limit,
-          lower_circuit_limit: result.lower_circuit_limit,
-          volume: result.volume,
-          market_cap: result.market_cap
-        };
-      }
+      const [stockResult, dividendResult] = await Promise.all([
+        this.http.get<any>(
+          `${this.CHAT_BACKEND_URL}/api/stock/search?q=${encodeURIComponent(row.instrument)}`
+        ).toPromise(),
+        this.api.getDividendBySymbol(row.instrument).toPromise()
+      ]);
+      
+      row.detail = {
+        ohlc: stockResult?.ohlc,
+        bid_price: stockResult?.bid_price,
+        offer_price: stockResult?.offer_price,
+        total_buy_quantity: stockResult?.total_buy_quantity,
+        total_sell_quantity: stockResult?.total_sell_quantity,
+        week_52_high: stockResult?.week_52_high,
+        week_52_low: stockResult?.week_52_low,
+        upper_circuit_limit: stockResult?.upper_circuit_limit,
+        lower_circuit_limit: stockResult?.lower_circuit_limit,
+        volume: stockResult?.volume,
+        market_cap: stockResult?.market_cap,
+        dividend_yield: stockResult?.dividend_yield,
+        totalDividendReceived: dividendResult?.totalDividendReceived,
+        dividendCount: dividendResult?.dividendCount
+      };
     } catch (e) {
       this.snackBar.open('Failed to load stock details', 'Close', { duration: 2000 });
     }

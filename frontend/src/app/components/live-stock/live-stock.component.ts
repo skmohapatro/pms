@@ -5,6 +5,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 export interface StockQuote {
   symbol: string;
   exchange: string;
+  segment?: string;
   last_price?: number;
   day_change?: number;
   day_change_perc?: number;
@@ -24,6 +25,11 @@ export interface StockQuote {
   total_buy_quantity?: number;
   total_sell_quantity?: number;
   market_cap?: number;
+  // FNO specific fields
+  open_interest?: number;
+  oi_day_change?: number;
+  oi_day_change_percentage?: number;
+  implied_volatility?: number;
 }
 
 @Component({

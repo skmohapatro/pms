@@ -24,10 +24,15 @@ public interface InstrumentRepository extends JpaRepository<Instrument, Long> {
     @Query("SELECT i FROM Instrument i WHERE i.segment = 'CASH' AND i.exchange = 'NSE'")
     List<Instrument> findAllNseCashInstruments();
     
-    @Query("SELECT i FROM Instrument i WHERE i.segment = 'CASH' AND i.exchange = 'NSE' " +
+    @Query("SELECT i FROM Instrument i WHERE i.exchange = 'NSE' " +
            "AND (LOWER(i.tradingSymbol) LIKE LOWER(CONCAT('%', :query, '%')) " +
-           "OR LOWER(i.name) LIKE LOWER(CONCAT('%', :query, '%')))")
+           "OR LOWER(i.name) LIKE LOWER(CONCAT('%', :query, '%'))) " +
+           "ORDER BY CASE WHEN i.segment = 'CASH' THEN 0 ELSE 1 END, i.tradingSymbol")
     List<Instrument> searchNseCashInstruments(@Param("query") String query);
+    
+    @Query("SELECT i FROM Instrument i WHERE i.exchange = 'NSE' AND i.segment = 'FNO' " +
+           "AND LOWER(i.tradingSymbol) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<Instrument> searchNseFnoInstruments(@Param("query") String query);
     
     @Query("SELECT i FROM Instrument i WHERE " +
            "LOWER(i.tradingSymbol) LIKE LOWER(CONCAT('%', :query, '%')) " +

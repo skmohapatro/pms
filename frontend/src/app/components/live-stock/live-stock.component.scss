@@ -121,6 +121,15 @@
         font-size: 0.75rem;
         font-weight: 600;
       }
+
+      .segment-badge {
+        background: #fff3e0;
+        color: #e65100;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
     }
   }
 
@@ -211,6 +220,14 @@
           }
 
           &.highlight-low {
+            color: #c62828;
+          }
+
+          &.positive {
+            color: #2e7d32;
+          }
+
+          &.negative {
             color: #c62828;
           }
         }

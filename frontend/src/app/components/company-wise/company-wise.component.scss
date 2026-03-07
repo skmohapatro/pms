@@ -223,6 +223,16 @@
   gap: 8px;
   padding: 0;
   border: none;
+  align-items: center;
+}
+
+.dividend-yield {
+  color: #ff6f00;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 4px 10px;
+  background: #fff3e0;
+  border-radius: 4px;
 }
 
 .brand-link {

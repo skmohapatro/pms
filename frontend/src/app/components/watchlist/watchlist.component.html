@@ -64,8 +64,12 @@
     <div class="detail-panel">
       <mat-card *ngIf="selectedWatchList">
         <mat-card-header>
-          <mat-card-title>{{ selectedWatchList.name }}</mat-card-title>
-          <mat-card-subtitle *ngIf="selectedWatchList.description">{{ selectedWatchList.description }}</mat-card-subtitle>
+          <mat-card-title>
+            {{ selectedWatchList.name }}
+            <button mat-icon-button (click)="fetchAllLivePrices()" [disabled]="loadingPrices" matTooltip="Refresh Prices">
+              <mat-icon>{{ loadingPrices ? 'hourglass_empty' : 'refresh' }}</mat-icon>
+            </button>
+          </mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <!-- Search Section -->
@@ -113,14 +117,31 @@
               </td>
             </ng-container>
 
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef> Name </th>
-              <td mat-cell *matCellDef="let row"> {{ row.name }} </td>
+            <ng-container matColumnDef="ltp">
+              <th mat-header-cell *matHeaderCellDef> LTP </th>
+              <td mat-cell *matCellDef="let row">
+                <span *ngIf="!row.loading">₹{{ row.ltp | number:'1.2-2' }}</span>
+                <mat-spinner diameter="18" *ngIf="row.loading"></mat-spinner>
+              </td>
             </ng-container>
 
-            <ng-container matColumnDef="segment">
-              <th mat-header-cell *matHeaderCellDef> Segment </th>
-              <td mat-cell *matCellDef="let row"> {{ row.segment }} </td>
+            <ng-container matColumnDef="dayChange">
+              <th mat-header-cell *matHeaderCellDef> Today's Change </th>
+              <td mat-cell *matCellDef="let row">
+                <span *ngIf="!row.loading" [ngClass]="getPnlClass(row.dayChange)">
+                  {{ row.dayChange | number:'1.2-2' }} ({{ row.dayChangePerc >= 0 ? '+' : '' }}{{ row.dayChangePerc | number:'1.2-2' }}%)
+                </span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="week52Range">
+              <th mat-header-cell *matHeaderCellDef> 52W High / Low </th>
+              <td mat-cell *matCellDef="let row">
+                <span *ngIf="!row.loading && row.detail">
+                  <span class="positive">{{ row.detail.week_52_high | number:'1.2-2' }}</span> / 
+                  <span class="negative">{{ row.detail.week_52_low | number:'1.2-2' }}</span>
+                </span>
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="actions">

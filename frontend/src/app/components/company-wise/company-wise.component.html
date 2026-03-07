@@ -134,7 +134,12 @@
               <div class="detail-header">
                 <div class="header-left">
                   <span class="symbol">{{ row.instrument }}</span>
-                  <!-- External links -->
+                  <!-- Dividend info -->
+                  <div class="external-links" *ngIf="row.detail?.totalDividendReceived && row.detail.totalDividendReceived > 0">
+                    <span class="dividend-yield">
+                      Dividend Received: ₹{{ row.detail.totalDividendReceived | number:'1.2-2' }} ({{ row.detail.dividendCount }} times)
+                    </span>
+                  </div>
                   <div class="external-links">
                     <a class="brand-link nse" [href]="getNseUrl(row.instrument)" target="_blank" rel="noopener noreferrer">
                       <mat-icon class="brand-icon">show_chart</mat-icon>

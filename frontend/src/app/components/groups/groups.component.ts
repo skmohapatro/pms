@@ -24,6 +24,9 @@ export interface InstrumentWithLive extends InstrumentSummary {
   ltp?: number;
   dayChange?: number;
   dayChangePerc?: number;
+  unrealizedPnl?: number;
+  currentValue?: number;
+  changeInValue?: number;
   loading?: boolean;
   detail?: StockDetail;
   detailLoading?: boolean;
@@ -48,6 +51,14 @@ export class GroupsComponent implements OnInit {
   newGroupName = '';
   expandedElement: InstrumentWithLive | null = null;
   enrichedInstruments: InstrumentWithLive[] = [];
+
+  totalInvested = 0;
+  totalQty = 0;
+  totalCurrentValue = 0;
+  totalUnrealizedPnl = 0;
+  totalDayChange = 0;
+  totalChangeInValue = 0;
+  loadingPrices = false;
 
   private readonly CHAT_BACKEND_URL = 'http://localhost:5000';
 
@@ -107,8 +118,10 @@ export class GroupsComponent implements OnInit {
     this.api.getGroupDetail(group.id).subscribe({
       next: (detail) => {
         this.selectedGroupDetail = detail;
-        this.enrichedInstruments = detail.instruments.map(i => ({ ...i, loading: false }));
+        this.enrichedInstruments = detail.instruments.map(i => ({ ...i, loading: true }));
         this.expandedElement = null;
+        this.calculateTotals();
+        this.fetchAllLivePrices();
       },
       error: () => this.snackBar.open('Failed to load group detail', 'Close', { duration: 3000 })
     });
@@ -207,5 +220,52 @@ export class GroupsComponent implements OnInit {
       },
       error: () => this.snackBar.open('Failed to remove instrument', 'Close', { duration: 3000 })
     });
+  }
+
+  async fetchAllLivePrices(): Promise<void> {
+    this.loadingPrices = true;
+    const batchSize = 5;
+    
+    for (let i = 0; i < this.enrichedInstruments.length; i += batchSize) {
+      const batch = this.enrichedInstruments.slice(i, i + batchSize);
+      await Promise.all(batch.map(inst => this.fetchLivePrice(inst)));
+    }
+    
+    this.loadingPrices = false;
+    this.calculateTotals();
+  }
+
+  async fetchLivePrice(instrument: InstrumentWithLive): Promise<void> {
+    try {
+      const result = await this.http.get<any>(
+        `${this.CHAT_BACKEND_URL}/api/stock/search?q=${encodeURIComponent(instrument.instrument)}`
+      ).toPromise();
+      
+      if (result && result.last_price) {
+        instrument.ltp = result.last_price;
+        instrument.dayChange = result.day_change || 0;
+        instrument.dayChangePerc = result.day_change_perc || 0;
+        instrument.currentValue = (instrument.ltp || 0) * instrument.qty;
+        instrument.unrealizedPnl = instrument.currentValue - instrument.invested;
+        instrument.changeInValue = (instrument.dayChange || 0) * instrument.qty;
+      }
+    } catch (e) {
+      // Silent fail for individual stocks
+    }
+    instrument.loading = false;
+  }
+
+  calculateTotals(): void {
+    this.totalInvested = this.enrichedInstruments.reduce((sum, i) => sum + i.invested, 0);
+    this.totalQty = this.enrichedInstruments.reduce((sum, i) => sum + i.qty, 0);
+    this.totalCurrentValue = this.enrichedInstruments.reduce((sum, i) => sum + (i.currentValue || 0), 0);
+    this.totalUnrealizedPnl = this.enrichedInstruments.reduce((sum, i) => sum + (i.unrealizedPnl || 0), 0);
+    this.totalDayChange = this.enrichedInstruments.reduce((sum, i) => sum + (i.dayChange || 0), 0);
+    this.totalChangeInValue = this.enrichedInstruments.reduce((sum, i) => sum + (i.changeInValue || 0), 0);
+  }
+
+  refreshAllPrices(): void {
+    this.enrichedInstruments.forEach(i => i.loading = true);
+    this.fetchAllLivePrices();
   }
 }

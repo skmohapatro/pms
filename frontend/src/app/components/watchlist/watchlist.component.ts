@@ -54,9 +54,10 @@ export class WatchlistComponent implements OnInit {
   instrumentStatus: InstrumentStatus | null = null;
   isRefreshing = false;
 
-  displayedColumns = ['tradingSymbol', 'name', 'segment', 'actions'];
+  displayedColumns = ['tradingSymbol', 'ltp', 'dayChange', 'week52Range', 'actions'];
   expandedElement: InstrumentWithLive | null = null;
   enrichedInstruments: InstrumentWithLive[] = [];
+  loadingPrices = false;
 
   private readonly CHAT_BACKEND_URL = 'http://localhost:5000';
 
@@ -137,11 +138,45 @@ export class WatchlistComponent implements OnInit {
     this.api.getWatchListById(watchList.id).subscribe({
       next: (detail) => {
         this.selectedWatchList = detail;
-        this.enrichedInstruments = detail.instruments.map(i => ({ ...i, loading: false }));
+        this.enrichedInstruments = detail.instruments.map(i => ({ ...i, loading: true }));
         this.expandedElement = null;
+        this.fetchAllLivePrices();
       },
       error: () => this.snackBar.open('Failed to load watch list detail', 'Close', { duration: 3000 })
     });
+  }
+
+  async fetchAllLivePrices(): Promise<void> {
+    this.loadingPrices = true;
+    const batchSize = 5;
+    
+    for (let i = 0; i < this.enrichedInstruments.length; i += batchSize) {
+      const batch = this.enrichedInstruments.slice(i, i + batchSize);
+      await Promise.all(batch.map(inst => this.fetchLivePrice(inst)));
+    }
+    
+    this.loadingPrices = false;
+  }
+
+  async fetchLivePrice(instrument: InstrumentWithLive): Promise<void> {
+    try {
+      const result = await this.http.get<any>(
+        `${this.CHAT_BACKEND_URL}/api/stock/search?q=${encodeURIComponent(instrument.tradingSymbol)}`
+      ).toPromise();
+      
+      if (result && result.last_price) {
+        instrument.ltp = result.last_price;
+        instrument.dayChange = result.day_change || 0;
+        instrument.dayChangePerc = result.day_change_perc || 0;
+        instrument.detail = {
+          week_52_high: result.week_52_high,
+          week_52_low: result.week_52_low
+        };
+      }
+    } catch (e) {
+      // Silent fail for individual stocks
+    }
+    instrument.loading = false;
   }
 
   toggleRow(row: InstrumentWithLive): void {
@@ -236,6 +271,7 @@ export class WatchlistComponent implements OnInit {
     this.api.removeInstrumentFromWatchList(this.selectedWatchList.id, instrumentId).subscribe({
       next: (updatedWatchList) => {
         this.selectedWatchList = updatedWatchList;
+        this.enrichedInstruments = this.enrichedInstruments.filter(i => i.id !== instrumentId);
         this.snackBar.open('Instrument removed', 'Close', { duration: 3000 });
       },
       error: () => this.snackBar.open('Failed to remove instrument', 'Close', { duration: 3000 })

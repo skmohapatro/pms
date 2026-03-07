@@ -197,9 +197,11 @@ public class InstrumentService {
         Map<String, Object> status = new HashMap<>();
         long totalCount = instrumentRepository.count();
         long nseCashCount = instrumentRepository.countBySegment("CASH");
+        long nseFnoCount = instrumentRepository.countBySegment("FNO");
 
         status.put("totalInstruments", totalCount);
         status.put("nseCashCount", nseCashCount);
+        status.put("nseFnoCount", nseFnoCount);
         status.put("lastRefreshTime", lastRefreshTime != null ? lastRefreshTime.toString() : "Never");
         status.put("isLoaded", totalCount > 0);
 

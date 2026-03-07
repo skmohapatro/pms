@@ -304,7 +304,7 @@ def get_stock_ltp():
 
 @app.route('/api/stock/search', methods=['GET'])
 def search_stock():
-    """Search for stocks by symbol - returns quote data."""
+    """Search for stocks/derivatives by symbol - returns quote data."""
     if not groww_client:
         return jsonify({"error": "Groww API not configured"}), 503
     
@@ -313,16 +313,36 @@ def search_stock():
     if not query:
         return jsonify({"error": "Query parameter 'q' is required"}), 400
     
+    # Determine segment based on symbol format
+    # Derivatives typically have format like: NIFTY26MAR25FUT, BANKNIFTY26MAR25C50000, NIFTY24000CE
+    segment = groww_client.SEGMENT_CASH
+    
+    # Check for FNO patterns - derivatives usually have numbers followed by FUT/CE/PE
+    # or end with FUT, or contain date patterns like 26MAR25
+    is_derivative = (
+        'FUT' in query or 
+        query.endswith('CE') or 
+        query.endswith('PE') or
+        'CALL' in query or 
+        'PUT' in query or
+        # Check for date patterns like 26MAR25, 26MAR, JAN, FEB, etc
+        any(month in query for month in ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'])
+    )
+    
+    if is_derivative:
+        segment = groww_client.SEGMENT_FNO
+    
     try:
         quote = groww_client.get_quote(
             exchange=groww_client.EXCHANGE_NSE,
-            segment=groww_client.SEGMENT_CASH,
+            segment=segment,
             trading_symbol=query
         )
         
         result = {
             "symbol": query,
             "exchange": "NSE",
+            "segment": "FNO" if segment == groww_client.SEGMENT_FNO else "CASH",
             "last_price": quote.get("last_price"),
             "day_change": quote.get("day_change"),
             "day_change_perc": quote.get("day_change_perc"),
@@ -336,13 +356,19 @@ def search_stock():
             "lower_circuit_limit": quote.get("lower_circuit_limit"),
             "total_buy_quantity": quote.get("total_buy_quantity"),
             "total_sell_quantity": quote.get("total_sell_quantity"),
-            "market_cap": quote.get("market_cap")
+            "market_cap": quote.get("market_cap"),
+            "dividend_yield": quote.get("dividend_yield"),
+            # FNO specific fields
+            "open_interest": quote.get("open_interest"),
+            "oi_day_change": quote.get("oi_day_change"),
+            "oi_day_change_percentage": quote.get("oi_day_change_percentage"),
+            "implied_volatility": quote.get("implied_volatility")
         }
         
         return jsonify(result)
     except Exception as e:
         logger.error(f"Error searching for {query}: {e}")
-        return jsonify({"error": f"Could not find stock: {query}. {str(e)}"}), 404
+        return jsonify({"error": f"Could not find stock: {query}. Wrong segment for trading symbol: {query}"}), 404
 
 
 @app.route('/api/stock/health', methods=['GET'])

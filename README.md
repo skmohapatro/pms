@@ -75,7 +75,7 @@ Or manually close the terminal windows.
 - **Frontend**: http://localhost:4200
 - **Backend API**: http://localhost:8080/api
 - **H2 Console**: http://localhost:8080/h2-console
-  - JDBC URL: `jdbc:h2:file:./data/portfoliodb`
+  - JDBC URL: `jdbc:h2:file:./data/portfoliodb;AUTO_SERVER=TRUE`
   - Username: `sa`
   - Password: (leave empty)
 

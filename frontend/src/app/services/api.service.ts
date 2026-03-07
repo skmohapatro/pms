@@ -85,6 +85,12 @@ export interface Dividend {
   fy?: string;
 }
 
+export interface DividendSummary {
+  symbol: string;
+  totalDividendReceived: number;
+  dividendCount: number;
+}
+
 export interface RealizedPnL {
   id?: number;
   symbol: string;
@@ -273,6 +279,10 @@ export class ApiService {
 
   getDividendFyList(): Observable<string[]> {
     return this.http.get<string[]>(`${this.baseUrl}/dividends/fy`);
+  }
+
+  getDividendBySymbol(symbol: string): Observable<DividendSummary> {
+    return this.http.get<DividendSummary>(`${this.baseUrl}/dividends/by-symbol/${encodeURIComponent(symbol)}`);
   }
 
   // Realized P&L
