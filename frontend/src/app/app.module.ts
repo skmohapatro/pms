@@ -45,6 +45,7 @@ import { RealizedPnLDialogComponent } from './components/realized-pnl/realized-p
 import { LiveStockComponent } from './components/live-stock/live-stock.component';
 import { WatchlistComponent } from './components/watchlist/watchlist.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
+import { ArbitrageOpportunityComponent } from './components/arbitrage-opportunity/arbitrage-opportunity.component';
 
 @NgModule({
   declarations: [
@@ -63,7 +64,8 @@ import { DashboardComponent } from './components/dashboard/dashboard.component';
     RealizedPnLDialogComponent,
     LiveStockComponent,
     WatchlistComponent,
-    DashboardComponent
+    DashboardComponent,
+    ArbitrageOpportunityComponent
   ],
   imports: [
     BrowserModule,

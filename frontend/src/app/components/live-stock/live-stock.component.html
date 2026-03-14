@@ -150,6 +150,10 @@
       <div class="data-section" *ngIf="stockData.segment === 'FNO'">
         <h4><mat-icon>analytics</mat-icon> Derivatives Data</h4>
         <div class="data-row">
+          <span class="label">Lot Size</span>
+          <span class="value highlight-info">{{ formatNumber(stockData.lot_size) }}</span>
+        </div>
+        <div class="data-row">
           <span class="label">Open Interest</span>
           <span class="value">{{ formatNumber(stockData.open_interest) }}</span>
         </div>

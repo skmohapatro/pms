@@ -30,6 +30,8 @@ export interface StockQuote {
   oi_day_change?: number;
   oi_day_change_percentage?: number;
   implied_volatility?: number;
+  // Instrument metadata
+  lot_size?: number;
 }
 
 @Component({

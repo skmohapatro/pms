@@ -11,6 +11,7 @@ import { RealizedPnLComponent } from './components/realized-pnl/realized-pnl.com
 import { LiveStockComponent } from './components/live-stock/live-stock.component';
 import { WatchlistComponent } from './components/watchlist/watchlist.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
+import { ArbitrageOpportunityComponent } from './components/arbitrage-opportunity/arbitrage-opportunity.component';
 
 const routes: Routes = [
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -24,7 +25,8 @@ const routes: Routes = [
   { path: 'dividends', component: DividendComponent },
   { path: 'realized-pnl', component: RealizedPnLComponent },
   { path: 'live-stock', component: LiveStockComponent },
-  { path: 'watchlist', component: WatchlistComponent }
+  { path: 'watchlist', component: WatchlistComponent },
+  { path: 'arbitrage-opportunity', component: ArbitrageOpportunityComponent }
 ];
 
 @NgModule({

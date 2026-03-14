@@ -332,6 +332,17 @@ def search_stock():
     if is_derivative:
         segment = groww_client.SEGMENT_FNO
     
+    # Fetch lot size from instruments database
+    lot_size = None
+    try:
+        # Call backend Java API to get instrument details
+        instrument_response = requests.get(f"{JAVA_BACKEND_URL}/api/instruments/symbol/{query}", timeout=5)
+        if instrument_response.status_code == 200:
+            instrument_data = instrument_response.json()
+            lot_size = instrument_data.get("lotSize")
+    except Exception as e:
+        logger.debug(f"Could not fetch lot size from backend: {e}")
+    
     try:
         quote = groww_client.get_quote(
             exchange=groww_client.EXCHANGE_NSE,
@@ -362,13 +373,53 @@ def search_stock():
             "open_interest": quote.get("open_interest"),
             "oi_day_change": quote.get("oi_day_change"),
             "oi_day_change_percentage": quote.get("oi_day_change_percentage"),
-            "implied_volatility": quote.get("implied_volatility")
+            "implied_volatility": quote.get("implied_volatility"),
+            # Instrument metadata
+            "lot_size": lot_size
         }
         
         return jsonify(result)
     except Exception as e:
         logger.error(f"Error searching for {query}: {e}")
         return jsonify({"error": f"Could not find stock: {query}. Wrong segment for trading symbol: {query}"}), 404
+
+
+@app.route('/api/stock/test', methods=['GET'])
+def test_stock():
+    """Test a specific symbol with raw Groww API response."""
+    if not groww_client:
+        return jsonify({"error": "Groww API not configured"}), 503
+    
+    symbol = request.args.get('symbol', '').upper()
+    
+    if not symbol:
+        return jsonify({"error": "Symbol parameter is required"}), 400
+    
+    # Determine segment
+    segment = groww_client.SEGMENT_CASH
+    if 'FUT' in symbol or symbol.endswith('CE') or symbol.endswith('PE'):
+        segment = groww_client.SEGMENT_FNO
+    
+    try:
+        # Get raw quote
+        quote = groww_client.get_quote(
+            exchange=groww_client.EXCHANGE_NSE,
+            segment=segment,
+            trading_symbol=symbol
+        )
+        
+        return jsonify({
+            "symbol": symbol,
+            "segment": "FNO" if segment == groww_client.SEGMENT_FNO else "CASH",
+            "raw_response": quote,
+            "available_fields": list(quote.keys()) if isinstance(quote, dict) else "Not a dict"
+        })
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "symbol": symbol,
+            "segment": "FNO" if segment == groww_client.SEGMENT_FNO else "CASH"
+        }), 500
 
 
 @app.route('/api/stock/health', methods=['GET'])
