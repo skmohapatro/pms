@@ -13,6 +13,7 @@ import { ArbitrageService, ArbitrageOpportunity } from '../../services/arbitrage
 export class ArbitrageOpportunityComponent implements OnInit {
   displayedColumns: string[] = [
     'companyCode',
+    'currentDateTime',
     'selectedExpiry',
     'spotPrice',
     'featurePriceL',
@@ -37,6 +38,10 @@ export class ArbitrageOpportunityComponent implements OnInit {
   lastRefreshTime: Date | null = null;
   totalOpportunities = 0;
   calculationDuration = 0;
+  totalCompanies = 0;
+  successfulCompanies = 0;
+  failedCompanies = 0;
+  totalFuturesProcessed = 0;
 
   constructor(
     private arbitrageService: ArbitrageService,
@@ -69,6 +74,10 @@ export class ArbitrageOpportunityComponent implements OnInit {
         this.totalOpportunities = response.count;
         this.calculationDuration = response.durationMs;
         this.lastRefreshTime = new Date(response.timestamp);
+        this.totalCompanies = response.totalCompanies || 0;
+        this.successfulCompanies = response.successfulCompanies || 0;
+        this.failedCompanies = response.failedCompanies || 0;
+        this.totalFuturesProcessed = response.totalFuturesProcessed || 0;
         this.loading = false;
         
         this.snackBar.open(
@@ -123,7 +132,7 @@ export class ArbitrageOpportunityComponent implements OnInit {
     }
 
     const headers = [
-      'Company Code', 'Expiry Date', 'Spot Price', 'Futures Price (Last)',
+      'Company Code', 'Found At', 'Expiry Date', 'Spot Price', 'Futures Price (Last)',
       'Futures Price (Close)', 'Lot Size', 'Holding Days', 'Price Difference',
       '% Price Difference', 'Futures Investment', 'Spot Investment',
       'Total Investment', 'Total Profit', 'Per Day Return', 'Per Annum Return %'
@@ -134,6 +143,7 @@ export class ArbitrageOpportunityComponent implements OnInit {
     data.forEach(opp => {
       const row = [
         opp.companyCode,
+        opp.currentDateTime,
         opp.selectedExpiry,
         opp.spotPrice,
         opp.featurePriceL,

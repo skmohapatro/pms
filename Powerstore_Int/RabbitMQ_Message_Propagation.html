@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RabbitMQ Message Propagation - Animated Flow</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 28px;
+      color: #00d4ff;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .container {
+      position: relative;
+      width: 1000px;
+      height: 600px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.03);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    /* Component boxes */
+    .component {
+      position: absolute;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .component:hover {
+      transform: scale(1.05);
+      z-index: 100;
+    }
+    .component .label {
+      font-size: 10px;
+      opacity: 0.7;
+      margin-top: 4px;
+      font-weight: 400;
+    }
+    
+    /* Color coding by type */
+    .producer { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .rabbitmq { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .consumer { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #1a1a2e; }
+    .queue { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #1a1a2e; }
+    .dlq { background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%); }
+    
+    /* Arrows (SVG paths) */
+    svg.arrows {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .arrow-path {
+      fill: none;
+      stroke: rgba(255,255,255,0.3);
+      stroke-width: 2;
+    }
+    
+    /* Data packets */
+    .packet {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #00d4ff;
+      box-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff;
+      opacity: 0;
+      z-index: 50;
+    }
+    
+    /* Step indicator */
+    .step-indicator {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .step-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      transition: all 0.3s ease;
+    }
+    .step-dot.active {
+      background: #00d4ff;
+      box-shadow: 0 0 10px #00d4ff;
+    }
+    
+    /* Legend */
+    .legend {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.5);
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 11px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+    
+    /* Step description */
+    .step-desc {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+      min-width: 400px;
+      border: 1px solid #00d4ff;
+    }
+    
+    /* Controls */
+    .controls {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .controls button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: #fff;
+      padding: 12px 30px;
+      font-size: 14px;
+      border-radius: 25px;
+      cursor: pointer;
+      margin: 0 10px;
+      transition: all 0.3s ease;
+    }
+    .controls button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.5);
+    }
+    
+    /* Highlight active component */
+    .component.active {
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+      50% { box-shadow: 0 4px 30px rgba(0,212,255,0.6); }
+    }
+    
+    /* Detail Popup */
+    .detail-popup {
+      position: absolute;
+      background: linear-gradient(135deg, rgba(20, 30, 48, 0.98) 0%, rgba(36, 59, 85, 0.98) 100%);
+      border: 2px solid #00d4ff;
+      border-radius: 12px;
+      padding: 18px 22px;
+      max-width: 320px;
+      z-index: 200;
+      opacity: 0;
+      transform: scale(0.8) translateY(-10px);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: auto;
+      box-shadow: 0 10px 40px rgba(0, 212, 255, 0.3), 0 0 20px rgba(0, 212, 255, 0.2);
+    }
+    .detail-popup.show {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+    .detail-popup.hide {
+      opacity: 0;
+      transform: scale(0.9) translateY(10px);
+    }
+    .detail-popup h3 {
+      color: #00d4ff;
+      font-size: 15px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .detail-popup h3::before {
+      content: "●";
+      font-size: 10px;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .detail-popup ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .detail-popup li {
+      font-size: 12px;
+      color: #ccc;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-left: 12px;
+      position: relative;
+    }
+    .detail-popup li:last-child {
+      border-bottom: none;
+    }
+    .detail-popup li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: #00d4ff;
+      font-size: 10px;
+    }
+    .detail-popup .highlight {
+      color: #43e97b;
+      font-weight: 600;
+    }
+    .detail-popup .tech {
+      color: #f5576c;
+      font-weight: 600;
+    }
+    
+    /* Queue visualization */
+    .queue-visual {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: center;
+    }
+    .queue-item {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #43e97b;
+      opacity: 0.3;
+      transition: all 0.3s ease;
+    }
+    .queue-item.filled {
+      opacity: 1;
+      background: #00d4ff;
+      box-shadow: 0 0 5px #00d4ff;
+    }
+
+    /* ===== STORYTELLING SECTIONS ===== */
+    .chapter-nav {
+      max-width: 1000px;
+      margin: 30px auto 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+    .chapter-nav button {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(0,212,255,0.3);
+      color: #aaa;
+      padding: 10px 18px;
+      font-size: 13px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .chapter-nav button:hover, .chapter-nav button.active {
+      background: rgba(0,212,255,0.15);
+      border-color: #00d4ff;
+      color: #00d4ff;
+    }
+    .chapter {
+      max-width: 1000px;
+      margin: 30px auto;
+      display: none;
+      animation: fadeChapter 0.5s ease;
+    }
+    .chapter.visible { display: block; }
+    @keyframes fadeChapter {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .chapter-title {
+      font-size: 24px;
+      color: #00d4ff;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .chapter-subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    /* Narration box */
+    .narration {
+      background: rgba(0,0,0,0.5);
+      border-left: 4px solid #f5576c;
+      padding: 16px 20px;
+      border-radius: 0 10px 10px 0;
+      margin-bottom: 24px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #ddd;
+    }
+    .narration em { color: #43e97b; font-style: normal; font-weight: 600; }
+    .narration strong { color: #00d4ff; }
+    .narration code {
+      background: rgba(255,255,255,0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #f5576c;
+    }
+
+    /* Mini animated diagrams */
+    .mini-diagram {
+      position: relative;
+      width: 100%;
+      height: 220px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .mini-box {
+      position: absolute;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.4s ease;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+    }
+    .mini-box.glow {
+      box-shadow: 0 3px 20px rgba(0,212,255,0.5);
+    }
+    .mini-packet {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      opacity: 0;
+      z-index: 10;
+    }
+    .mini-packet.blue { background: #00d4ff; box-shadow: 0 0 8px #00d4ff; }
+    .mini-packet.green { background: #43e97b; box-shadow: 0 0 8px #43e97b; }
+    .mini-packet.pink { background: #f5576c; box-shadow: 0 0 8px #f5576c; }
+    .mini-packet.gold { background: #fee140; box-shadow: 0 0 8px #fee140; }
+    .mini-label {
+      position: absolute;
+      font-size: 10px;
+      color: #888;
+      white-space: nowrap;
+    }
+    .mini-svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .mini-arrow {
+      fill: none;
+      stroke: rgba(255,255,255,0.25);
+      stroke-width: 1.5;
+      stroke-dasharray: 4 4;
+    }
+    .mini-arrow.active-arrow {
+      stroke: #00d4ff;
+      stroke-dasharray: none;
+      stroke-width: 2;
+    }
+
+    /* Exchange type tabs */
+    .exchange-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      justify-content: center;
+    }
+    .exchange-tabs button {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #aaa;
+      padding: 8px 16px;
+      font-size: 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .exchange-tabs button:hover { border-color: #00d4ff; color: #00d4ff; }
+    .exchange-tabs button.active {
+      background: rgba(0,212,255,0.2);
+      border-color: #00d4ff;
+      color: #00d4ff;
+    }
+    .exchange-panel { display: none; }
+    .exchange-panel.visible { display: block; }
+
+    /* Interactive demo buttons */
+    .demo-controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 16px 0;
+    }
+    .demo-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: #fff;
+      padding: 8px 20px;
+      font-size: 12px;
+      border-radius: 18px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .demo-btn:hover { transform: scale(1.05); }
+    .demo-btn.green { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #1a1a2e; }
+    .demo-btn.red { background: linear-gradient(135deg, #ff6b6b 0%, #f5576c 100%); }
+    .demo-btn.gold { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #1a1a2e; }
+
+    /* Status bar for demos */
+    .status-bar {
+      background: rgba(0,0,0,0.6);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #43e97b;
+      margin: 12px 0;
+      min-height: 60px;
+      line-height: 1.6;
+    }
+    .status-bar .log-ack { color: #43e97b; }
+    .status-bar .log-nack { color: #f5576c; }
+    .status-bar .log-info { color: #00d4ff; }
+    .status-bar .log-warn { color: #fee140; }
+
+    /* Prefetch slider */
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      justify-content: center;
+      margin: 16px 0;
+    }
+    .slider-group label { font-size: 13px; color: #aaa; }
+    .slider-group input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 200px;
+      height: 6px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 3px;
+      outline: none;
+    }
+    .slider-group input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #00d4ff;
+      cursor: pointer;
+    }
+    .slider-val {
+      color: #00d4ff;
+      font-weight: 700;
+      font-size: 18px;
+      min-width: 30px;
+      text-align: center;
+    }
+
+    /* Message queue visual (horizontal) */
+    .h-queue {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      justify-content: center;
+      margin: 12px 0;
+      min-height: 40px;
+    }
+    .h-msg {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      transition: all 0.4s ease;
+    }
+    .h-msg.waiting { background: rgba(0,212,255,0.25); border: 1px solid #00d4ff; color: #00d4ff; }
+    .h-msg.inflight { background: rgba(250,112,154,0.4); border: 1px solid #f5576c; color: #f5576c; animation: bob 0.6s infinite alternate; }
+    .h-msg.acked { background: rgba(67,233,123,0.3); border: 1px solid #43e97b; color: #43e97b; }
+    .h-msg.nacked { background: rgba(255,107,107,0.4); border: 1px solid #ff6b6b; color: #ff6b6b; }
+    @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+
+    /* Reference cards grid */
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 18px;
+      margin-top: 16px;
+    }
+    .ref-card {
+      background: linear-gradient(135deg, rgba(20,30,48,0.98) 0%, rgba(36,59,85,0.98) 100%);
+      border: 2px solid rgba(0,212,255,0.35);
+      border-radius: 12px;
+      padding: 18px 20px;
+      transition: border-color 0.25s ease;
+    }
+    .ref-card:hover { border-color: #00d4ff; }
+    .ref-card h4 { color: #00d4ff; font-size: 14px; margin-bottom: 8px; }
+    .ref-card p, .ref-card li {
+      font-size: 12px; color: #ccc; line-height: 1.5;
+    }
+    .ref-card ul { list-style: none; padding: 0; }
+    .ref-card li { padding: 3px 0 3px 14px; position: relative; }
+    .ref-card li::before { content: "\2192"; position: absolute; left: 0; color: #00d4ff; font-size: 10px; }
+    .ref-card .hl { color: #43e97b; font-weight: 600; }
+    .ref-card .tech { color: #f5576c; font-weight: 600; }
+
+    /* Comparison table */
+    .cmp-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 12px;
+    }
+    .cmp-table th {
+      background: rgba(0,212,255,0.15);
+      color: #00d4ff;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid rgba(0,212,255,0.3);
+    }
+    .cmp-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      color: #ccc;
+    }
+    .cmp-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .cmp-table .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .tag-direct { background: rgba(0,212,255,0.2); color: #00d4ff; }
+    .tag-topic { background: rgba(67,233,123,0.2); color: #43e97b; }
+    .tag-fanout { background: rgba(245,87,108,0.2); color: #f5576c; }
+    .tag-headers { background: rgba(254,209,64,0.2); color: #fee140; }
+  </style>
+</head>
+<body>
+  <h1>RabbitMQ Message Propagation</h1>
+  <p class="subtitle">Decoupling, Backpressure, and Flow Control Animation</p>
+  
+  <div class="container" id="diagram">
+    <!-- PRODUCERS -->
+    <div class="component producer" id="producer1" style="left: 30px; top: 100px; width: 120px;">
+      Producer 1
+      <div class="label">PowerStore Telemetry</div>
+    </div>
+    
+    <div class="component producer" id="producer2" style="left: 30px; top: 200px; width: 120px;">
+      Producer 2
+      <div class="label">PowerScale Events</div>
+    </div>
+    
+    <div class="component producer" id="producer3" style="left: 30px; top: 300px; width: 120px;">
+      Producer 3
+      <div class="label">Alerts Data</div>
+    </div>
+    
+    <!-- RABBITMQ BROKER -->
+    <div class="component rabbitmq" id="rabbitmq" style="left: 250px; top: 150px; width: 140px; height: 120px;">
+      RabbitMQ Broker
+      <div class="label">Message Exchange</div>
+    </div>
+    
+    <!-- QUEUES -->
+    <div class="component queue" id="queue1" style="left: 450px; top: 80px; width: 100px;">
+      Queue 1
+      <div class="label">Metrics</div>
+    </div>
+    
+    <div class="component queue" id="queue2" style="left: 450px; top: 180px; width: 100px;">
+      Queue 2
+      <div class="label">Events</div>
+    </div>
+    
+    <div class="component queue" id="queue3" style="left: 450px; top: 280px; width: 100px;">
+      Queue 3
+      <div class="label">Alerts</div>
+    </div>
+    
+    <div class="component dlq" id="dlq" style="left: 450px; top: 380px; width: 100px;">
+      DLQ
+      <div class="label">Dead Letters</div>
+    </div>
+    
+    <!-- CONSUMERS -->
+    <div class="component consumer" id="consumer1" style="left: 650px; top: 80px; width: 120px;">
+      Consumer 1
+      <div class="label">Data Processor</div>
+    </div>
+    
+    <div class="component consumer" id="consumer2" style="left: 650px; top: 180px; width: 120px;">
+      Consumer 2
+      <div class="label">Post Processor</div>
+    </div>
+    
+    <div class="component consumer" id="consumer3" style="left: 650px; top: 280px; width: 120px;">
+      Consumer 3
+      <div class="label">Alert Handler</div>
+    </div>
+    
+    <!-- Queue visualizations -->
+    <div class="queue-visual" id="queue1-visual" style="left: 470px; top: 120px;">
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+    </div>
+    
+    <div class="queue-visual" id="queue2-visual" style="left: 470px; top: 220px;">
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+    </div>
+    
+    <div class="queue-visual" id="queue3-visual" style="left: 470px; top: 320px;">
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+      <div class="queue-item"></div>
+    </div>
+    
+    <!-- SVG Arrows -->
+    <svg class="arrows">
+      <!-- Producers -> RabbitMQ -->
+      <path id="path1" class="arrow-path" d="M 150 120 L 250 180" />
+      <path id="path2" class="arrow-path" d="M 150 220 L 250 210" />
+      <path id="path3" class="arrow-path" d="M 150 320 L 250 240" />
+      
+      <!-- RabbitMQ -> Queues -->
+      <path id="path4" class="arrow-path" d="M 390 180 L 450 100" />
+      <path id="path5" class="arrow-path" d="M 390 210 L 450 200" />
+      <path id="path6" class="arrow-path" d="M 390 240 L 450 300" />
+      
+      <!-- Queues -> Consumers -->
+      <path id="path7" class="arrow-path" d="M 550 100 L 650 100" />
+      <path id="path8" class="arrow-path" d="M 550 200 L 650 200" />
+      <path id="path9" class="arrow-path" d="M 550 300 L 650 300" />
+      
+      <!-- To DLQ -->
+      <path id="path10" class="arrow-path" d="M 500 330 L 500 380" />
+    </svg>
+    
+    <!-- Data packets (created dynamically) -->
+    <div class="packet" id="packet1"></div>
+    <div class="packet" id="packet2"></div>
+    <div class="packet" id="packet3"></div>
+    
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color producer"></div> Producers</div>
+      <div class="legend-item"><div class="legend-color rabbitmq"></div> RabbitMQ</div>
+      <div class="legend-item"><div class="legend-color queue"></div> Queues</div>
+      <div class="legend-item"><div class="legend-color consumer"></div> Consumers</div>
+      <div class="legend-item"><div class="legend-color dlq"></div> Dead Letter</div>
+    </div>
+    
+    <!-- Step description -->
+    <div class="step-desc" id="stepDesc">Click "Start Animation" to see RabbitMQ message flow</div>
+    
+    <!-- Detail Popup -->
+    <div class="detail-popup" id="detailPopup">
+      <h3 id="popupTitle">Component Details</h3>
+      <ul id="popupContent"></ul>
+    </div>
+    
+    <!-- Step indicators -->
+    <div class="step-indicator">
+      <div class="step-dot" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+      <div class="step-dot" id="dot3"></div>
+      <div class="step-dot" id="dot4"></div>
+      <div class="step-dot" id="dot5"></div>
+      <div class="step-dot" id="dot6"></div>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <button onclick="startAnimation()">▶ Start Animation</button>
+    <button onclick="resetAnimation()">↺ Reset</button>
+  </div>
+
+  <!-- ===== CHAPTER NAVIGATION ===== -->
+  <div class="chapter-nav" id="chapterNav">
+    <button onclick="showChapter(1)" id="chBtn1">Ch 1: The Post Office</button>
+    <button onclick="showChapter(2)" id="chBtn2">Ch 2: Exchange Types</button>
+    <button onclick="showChapter(3)" id="chBtn3">Ch 3: ACK / NACK</button>
+    <button onclick="showChapter(4)" id="chBtn4">Ch 4: Prefetch</button>
+    <button onclick="showChapter(5)" id="chBtn5">Ch 5: Dead Letters</button>
+    <button onclick="showChapter(6)" id="chBtn6">Ch 6: Cheat Sheet</button>
+  </div>
+
+  <!-- ===== CHAPTER 1: THE POST OFFICE ===== -->
+  <div class="chapter" id="ch1">
+    <div class="chapter-title">Chapter 1: The Post Office Analogy</div>
+    <div class="chapter-subtitle">Understanding RabbitMQ through a story you already know</div>
+
+    <div class="narration">
+      Imagine a <strong>busy post office</strong> in the center of town. People (producers) walk in and drop letters at the counter.
+      They don't care <em>who</em> reads the letter or <em>when</em> — they just hand it over and leave.
+      The postal workers sort each letter by address and put it into the right <em>mailbox</em> (queue).
+      Recipients (consumers) come and pick up mail <em>at their own pace</em>. If a recipient is on vacation,
+      the letters simply pile up safely in the mailbox — nothing is lost.
+    </div>
+
+    <div class="mini-diagram" id="postOfficeDiagram">
+      <div class="mini-box producer" style="left:40px;top:30px;width:90px;">Person A<br><span style="font-size:9px;opacity:0.7">drops letter</span></div>
+      <div class="mini-box producer" style="left:40px;top:120px;width:90px;">Person B<br><span style="font-size:9px;opacity:0.7">drops parcel</span></div>
+      <div class="mini-box rabbitmq" style="left:250px;top:70px;width:120px;">Post Office<br><span style="font-size:9px;opacity:0.7">sorts & routes</span></div>
+      <div class="mini-box queue" style="left:480px;top:30px;width:100px;">Mailbox X<br><span style="font-size:9px;opacity:0.7">letters wait</span></div>
+      <div class="mini-box queue" style="left:480px;top:120px;width:100px;">Mailbox Y<br><span style="font-size:9px;opacity:0.7">parcels wait</span></div>
+      <div class="mini-box consumer" style="left:690px;top:30px;width:100px;">Alice<br><span style="font-size:9px;opacity:0.7">reads mail</span></div>
+      <div class="mini-box consumer" style="left:690px;top:120px;width:100px;">Bob<br><span style="font-size:9px;opacity:0.7">opens parcel</span></div>
+      <div class="mini-packet blue" id="po-pkt1"></div>
+      <div class="mini-packet green" id="po-pkt2"></div>
+      <svg class="mini-svg">
+        <path class="mini-arrow" d="M 130 55 L 250 90"/>
+        <path class="mini-arrow" d="M 130 145 L 250 110"/>
+        <path class="mini-arrow" d="M 370 85 L 480 55"/>
+        <path class="mini-arrow" d="M 370 100 L 480 145"/>
+        <path class="mini-arrow" d="M 580 55 L 690 55"/>
+        <path class="mini-arrow" d="M 580 145 L 690 145"/>
+      </svg>
+    </div>
+    <div class="demo-controls">
+      <button class="demo-btn" onclick="animatePostOffice()">▶ Watch the letters flow</button>
+    </div>
+
+    <div class="narration">
+      <strong>Key insight:</strong> The sender and receiver <em>never talk to each other directly</em>.
+      The post office (RabbitMQ) is the middleman — this is called <em>decoupling</em>.<br><br>
+      Why does this matter?<br>
+      • If Alice is slow reading, Person A doesn't have to wait.<br>
+      • If Bob's house burns down, the parcel is still safe in the mailbox.<br>
+      • You can add more mailboxes or hire more postal workers without changing anything else.
+    </div>
+
+    <table class="cmp-table">
+      <tr><th>Real World</th><th>RabbitMQ</th><th>Why It Matters</th></tr>
+      <tr><td>Person dropping a letter</td><td><span class="tag tag-direct">Producer</span></td><td>Fire-and-forget — no blocking</td></tr>
+      <tr><td>Post Office counter</td><td><span class="tag tag-topic">Exchange</span></td><td>Routes messages by rules</td></tr>
+      <tr><td>Address on the envelope</td><td><span class="tag tag-topic">Routing Key</span></td><td>Determines destination</td></tr>
+      <tr><td>Mailbox</td><td><span class="tag tag-fanout">Queue</span></td><td>Buffers until consumer is ready</td></tr>
+      <tr><td>Recipient picking up mail</td><td><span class="tag tag-headers">Consumer</span></td><td>Processes at own pace</td></tr>
+    </table>
+  </div>
+
+  <!-- ===== CHAPTER 2: EXCHANGE TYPES ===== -->
+  <div class="chapter" id="ch2">
+    <div class="chapter-title">Chapter 2: The Four Sorting Strategies</div>
+    <div class="chapter-subtitle">How RabbitMQ decides where each message goes</div>
+
+    <div class="narration">
+      Back at the post office, there are <em>four different sorting desks</em>. Each desk has its own rule
+      for routing letters. Pick a desk below to see how it works.
+    </div>
+
+    <div class="exchange-tabs">
+      <button class="active" onclick="showExchange('direct')">Direct</button>
+      <button onclick="showExchange('topic')">Topic</button>
+      <button onclick="showExchange('fanout')">Fanout</button>
+      <button onclick="showExchange('headers')">Headers</button>
+    </div>
+
+    <!-- DIRECT -->
+    <div class="exchange-panel visible" id="panel-direct">
+      <div class="narration">
+        <strong>Direct Exchange</strong> = <em>Exact address match</em>.<br>
+        A letter addressed to <code>billing</code> goes ONLY to the Billing mailbox. Simple, precise, predictable.
+      </div>
+      <div class="mini-diagram" id="directDiagram">
+        <div class="mini-box producer" style="left:30px;top:85px;width:100px;">Producer<br><span style="font-size:9px;opacity:0.7">key = "billing"</span></div>
+        <div class="mini-box rabbitmq" style="left:230px;top:85px;width:130px;">Direct Exchange<br><span style="font-size:9px;opacity:0.7">exact match</span></div>
+        <div class="mini-box queue" style="left:480px;top:30px;width:110px;">billing queue<br><span style="font-size:9px;opacity:0.7">bind: "billing"</span></div>
+        <div class="mini-box queue" style="left:480px;top:100px;width:110px;">shipping queue<br><span style="font-size:9px;opacity:0.7">bind: "shipping"</span></div>
+        <div class="mini-box queue" style="left:480px;top:170px;width:110px;">returns queue<br><span style="font-size:9px;opacity:0.7">bind: "returns"</span></div>
+        <div class="mini-packet blue" id="direct-pkt"></div>
+        <svg class="mini-svg">
+          <path class="mini-arrow" d="M 130 105 L 230 105"/>
+          <path class="mini-arrow" id="direct-a1" d="M 360 95 L 480 55"/>
+          <path class="mini-arrow" id="direct-a2" d="M 360 105 L 480 120"/>
+          <path class="mini-arrow" id="direct-a3" d="M 360 115 L 480 190"/>
+        </svg>
+        <div class="mini-label" style="left:370px;top:55px;color:#43e97b;">✓ match</div>
+        <div class="mini-label" style="left:370px;top:115px;color:#f5576c;">✗</div>
+        <div class="mini-label" style="left:370px;top:175px;color:#f5576c;">✗</div>
+      </div>
+      <div class="demo-controls"><button class="demo-btn" onclick="animateDirect()">▶ Send "billing" message</button></div>
+    </div>
+
+    <!-- TOPIC -->
+    <div class="exchange-panel" id="panel-topic">
+      <div class="narration">
+        <strong>Topic Exchange</strong> = <em>Pattern matching with wildcards</em>.<br>
+        Routing keys use dots: <code>order.created.us</code>. Bindings use <code>*</code> (one word) and <code>#</code> (zero or more words).<br>
+        Think of it as a smart mail filter: <code>order.*.us</code> catches all US orders regardless of action.
+      </div>
+      <div class="mini-diagram" id="topicDiagram">
+        <div class="mini-box producer" style="left:20px;top:85px;width:120px;">Producer<br><span style="font-size:9px;opacity:0.7">key = "order.created.us"</span></div>
+        <div class="mini-box rabbitmq" style="left:230px;top:85px;width:130px;">Topic Exchange<br><span style="font-size:9px;opacity:0.7">pattern match</span></div>
+        <div class="mini-box queue" style="left:480px;top:20px;width:130px;">US Orders<br><span style="font-size:9px;opacity:0.7">bind: "order.*.us"</span></div>
+        <div class="mini-box queue" style="left:480px;top:90px;width:130px;">All Created<br><span style="font-size:9px;opacity:0.7">bind: "order.created.#"</span></div>
+        <div class="mini-box queue" style="left:480px;top:160px;width:130px;">EU Shipping<br><span style="font-size:9px;opacity:0.7">bind: "order.shipped.eu"</span></div>
+        <div class="mini-packet green" id="topic-pkt"></div>
+        <svg class="mini-svg">
+          <path class="mini-arrow" d="M 140 105 L 230 105"/>
+          <path class="mini-arrow" id="topic-a1" d="M 360 95 L 480 45"/>
+          <path class="mini-arrow" id="topic-a2" d="M 360 105 L 480 110"/>
+          <path class="mini-arrow" id="topic-a3" d="M 360 115 L 480 180"/>
+        </svg>
+        <div class="mini-label" style="left:390px;top:40px;color:#43e97b;">✓ *.us</div>
+        <div class="mini-label" style="left:390px;top:110px;color:#43e97b;">✓ created.#</div>
+        <div class="mini-label" style="left:390px;top:175px;color:#f5576c;">✗ shipped.eu</div>
+      </div>
+      <div class="demo-controls"><button class="demo-btn green" onclick="animateTopic()">▶ Send "order.created.us"</button></div>
+    </div>
+
+    <!-- FANOUT -->
+    <div class="exchange-panel" id="panel-fanout">
+      <div class="narration">
+        <strong>Fanout Exchange</strong> = <em>Broadcast to everyone</em>.<br>
+        Like a loudspeaker announcement — <em>every</em> bound queue gets a copy. Routing key is completely ignored.
+        Perfect for events like "new user signed up" where multiple services need to react.
+      </div>
+      <div class="mini-diagram" id="fanoutDiagram">
+        <div class="mini-box producer" style="left:30px;top:85px;width:100px;">Producer<br><span style="font-size:9px;opacity:0.7">any key</span></div>
+        <div class="mini-box rabbitmq" style="left:230px;top:85px;width:130px;">Fanout Exchange<br><span style="font-size:9px;opacity:0.7">broadcast all</span></div>
+        <div class="mini-box queue" style="left:490px;top:20px;width:110px;">Email Service</div>
+        <div class="mini-box queue" style="left:490px;top:90px;width:110px;">Analytics</div>
+        <div class="mini-box queue" style="left:490px;top:160px;width:110px;">Audit Log</div>
+        <div class="mini-packet pink" id="fanout-pkt1"></div>
+        <div class="mini-packet pink" id="fanout-pkt2"></div>
+        <div class="mini-packet pink" id="fanout-pkt3"></div>
+        <svg class="mini-svg">
+          <path class="mini-arrow" d="M 130 105 L 230 105"/>
+          <path class="mini-arrow" d="M 360 95 L 490 45"/>
+          <path class="mini-arrow" d="M 360 105 L 490 110"/>
+          <path class="mini-arrow" d="M 360 115 L 490 180"/>
+        </svg>
+        <div class="mini-label" style="left:400px;top:40px;color:#43e97b;">✓ copy</div>
+        <div class="mini-label" style="left:400px;top:110px;color:#43e97b;">✓ copy</div>
+        <div class="mini-label" style="left:400px;top:175px;color:#43e97b;">✓ copy</div>
+      </div>
+      <div class="demo-controls"><button class="demo-btn red" onclick="animateFanout()">▶ Broadcast message</button></div>
+    </div>
+
+    <!-- HEADERS -->
+    <div class="exchange-panel" id="panel-headers">
+      <div class="narration">
+        <strong>Headers Exchange</strong> = <em>Match by metadata, not routing key</em>.<br>
+        Instead of an address, the letter has stickers: <code>format=pdf</code>, <code>type=report</code>.
+        The exchange checks message headers against binding arguments.
+        Use <code>x-match: all</code> (AND) or <code>x-match: any</code> (OR).
+      </div>
+      <div class="mini-diagram" id="headersDiagram">
+        <div class="mini-box producer" style="left:20px;top:85px;width:110px;">Producer<br><span style="font-size:9px;opacity:0.7">format=pdf, type=report</span></div>
+        <div class="mini-box rabbitmq" style="left:230px;top:85px;width:130px;">Headers Exchange<br><span style="font-size:9px;opacity:0.7">match headers</span></div>
+        <div class="mini-box queue" style="left:480px;top:30px;width:140px;">PDF Processor<br><span style="font-size:9px;opacity:0.7">x-match:any, format=pdf</span></div>
+        <div class="mini-box queue" style="left:480px;top:100px;width:140px;">Report Archive<br><span style="font-size:9px;opacity:0.7">x-match:all, format=pdf, type=report</span></div>
+        <div class="mini-box queue" style="left:480px;top:170px;width:140px;">Image Service<br><span style="font-size:9px;opacity:0.7">x-match:any, format=png</span></div>
+        <div class="mini-packet gold" id="headers-pkt"></div>
+        <svg class="mini-svg">
+          <path class="mini-arrow" d="M 130 105 L 230 105"/>
+          <path class="mini-arrow" d="M 360 95 L 480 55"/>
+          <path class="mini-arrow" d="M 360 105 L 480 120"/>
+          <path class="mini-arrow" d="M 360 115 L 480 190"/>
+        </svg>
+        <div class="mini-label" style="left:385px;top:48px;color:#43e97b;">✓ format=pdf</div>
+        <div class="mini-label" style="left:385px;top:118px;color:#43e97b;">✓ both match</div>
+        <div class="mini-label" style="left:385px;top:182px;color:#f5576c;">✗ format≠png</div>
+      </div>
+      <div class="demo-controls"><button class="demo-btn gold" onclick="animateHeaders()">▶ Send with headers</button></div>
+    </div>
+
+    <table class="cmp-table" style="margin-top:20px;">
+      <tr><th>Exchange</th><th>Routes By</th><th>Use When</th><th>Example</th></tr>
+      <tr><td><span class="tag tag-direct">Direct</span></td><td>Exact routing key</td><td>One-to-one, specific queue</td><td>Task dispatch to a named worker</td></tr>
+      <tr><td><span class="tag tag-topic">Topic</span></td><td>Wildcard pattern</td><td>Flexible multi-queue routing</td><td>order.*.us, log.error.#</td></tr>
+      <tr><td><span class="tag tag-fanout">Fanout</span></td><td>Broadcast (ignores key)</td><td>All consumers need the event</td><td>User signup notification</td></tr>
+      <tr><td><span class="tag tag-headers">Headers</span></td><td>Message header attributes</td><td>Complex multi-field matching</td><td>format=pdf AND type=report</td></tr>
+    </table>
+  </div>
+
+  <!-- ===== CHAPTER 3: ACK / NACK ===== -->
+  <div class="chapter" id="ch3">
+    <div class="chapter-title">Chapter 3: The Receipt System</div>
+    <div class="chapter-subtitle">How RabbitMQ knows a message was safely processed</div>
+
+    <div class="narration">
+      When Alice picks up a registered letter, she <em>signs a receipt</em>. Only then does the post office
+      remove it from the records. If Alice refuses the letter (it's damaged), she sends it back — the post office
+      can try <em>redelivering</em> it or send it to the <em>dead letter office</em>.<br><br>
+      In RabbitMQ, this receipt is called an <strong>ACK</strong> (acknowledgment). Refusing is a <strong>NACK</strong>.
+    </div>
+
+    <div class="narration">
+      <strong>The Golden Rule:</strong> <em>ACK only after your work is fully done.</em><br>
+      If you ACK before writing to the database and then crash — the message is gone forever.
+      If you ACK after — RabbitMQ will redeliver on crash. This is <em>at-least-once delivery</em>.
+    </div>
+
+    <div style="text-align:center;margin:10px 0;">
+      <span style="font-size:13px;color:#888;">Queue with 8 messages — click buttons to process them</span>
+    </div>
+    <div class="h-queue" id="ackQueue"></div>
+    <div class="demo-controls">
+      <button class="demo-btn green" onclick="ackDemo('ack')">✓ ACK (success)</button>
+      <button class="demo-btn red" onclick="ackDemo('nack')">✗ NACK (reject)</button>
+      <button class="demo-btn gold" onclick="ackDemo('nack-requeue')">↻ NACK + Requeue</button>
+      <button class="demo-btn" onclick="resetAckDemo()">Reset</button>
+    </div>
+    <div class="status-bar" id="ackLog">Waiting for you to process messages...</div>
+
+    <div class="narration" style="margin-top:20px;">
+      <strong>Three outcomes for every message:</strong><br><br>
+      1. <em>ACK</em> — "Got it, processed successfully." Message is <em>permanently removed</em> from the queue.<br>
+      2. <em>NACK</em> — "Can't handle this." Message goes to the <em>Dead Letter Queue</em> (if configured) or is discarded.<br>
+      3. <em>NACK + Requeue</em> — "Not now, try again." Message goes <em>back to the front</em> of the queue for retry.<br><br>
+      <strong>Warning:</strong> Requeue loops! If a message keeps failing and you keep requeuing,
+      it loops forever. Solution: use a <code>x-delivery-count</code> header or TTL to limit retries,
+      then route to DLQ.
+    </div>
+  </div>
+
+  <!-- ===== CHAPTER 4: PREFETCH ===== -->
+  <div class="chapter" id="ch4">
+    <div class="chapter-title">Chapter 4: Don't Bite Off More Than You Can Chew</div>
+    <div class="chapter-subtitle">Prefetch count — the flow control secret weapon</div>
+
+    <div class="narration">
+      Imagine Alice can only carry <em>3 letters at a time</em>. If the post office dumps 100 letters on her desk,
+      she's overwhelmed. The <strong>prefetch count</strong> tells RabbitMQ: "Only give me N unacknowledged messages at once."
+      Once Alice ACKs one, RabbitMQ sends the next. This prevents overload and enables <em>fair dispatch</em>.
+    </div>
+
+    <div class="slider-group">
+      <label>Prefetch Count:</label>
+      <input type="range" id="prefetchSlider" min="1" max="10" value="3" oninput="updatePrefetch()">
+      <span class="slider-val" id="prefetchVal">3</span>
+    </div>
+
+    <div style="text-align:center;margin:8px 0;">
+      <span style="font-size:12px;color:#888;">
+        <span style="color:#00d4ff;">■</span> Waiting &nbsp;
+        <span style="color:#f5576c;">■</span> In-flight (delivered, unACKed) &nbsp;
+        <span style="color:#43e97b;">■</span> ACKed
+      </span>
+    </div>
+    <div class="h-queue" id="prefetchQueue"></div>
+    <div class="demo-controls">
+      <button class="demo-btn green" onclick="prefetchAck()">✓ ACK next</button>
+      <button class="demo-btn" onclick="resetPrefetchDemo()">Reset</button>
+    </div>
+    <div class="status-bar" id="prefetchLog">Adjust the slider and watch how prefetch controls message delivery...</div>
+
+    <div class="narration" style="margin-top:20px;">
+      <strong>Prefetch tips for interviews:</strong><br><br>
+      • <code>prefetch = 1</code> — Safest. Round-robin, perfectly fair. But slow (one at a time).<br>
+      • <code>prefetch = 10-50</code> — Good default for most workloads. Balances throughput and fairness.<br>
+      • <code>prefetch = 0</code> — <em>Unlimited!</em> RabbitMQ dumps everything. Only use for very fast consumers.<br>
+      • Too high → one slow consumer hogs messages while others sit idle.<br>
+      • Too low → network round-trips dominate, throughput drops.
+    </div>
+  </div>
+
+  <!-- ===== CHAPTER 5: DEAD LETTER QUEUE ===== -->
+  <div class="chapter" id="ch5">
+    <div class="chapter-title">Chapter 5: The Dead Letter Office</div>
+    <div class="chapter-subtitle">Where failed messages get a second chance</div>
+
+    <div class="narration">
+      Every post office has a <em>dead letter office</em> — where undeliverable mail ends up.
+      Letters arrive here for three reasons:<br><br>
+      1. <strong>Rejected</strong> — recipient NACKed without requeue<br>
+      2. <strong>Expired</strong> — the letter sat in the mailbox too long (TTL exceeded)<br>
+      3. <strong>Overflow</strong> — the mailbox was full (queue max-length exceeded)<br><br>
+      In RabbitMQ, you configure this with <code>x-dead-letter-exchange</code> and
+      <code>x-dead-letter-routing-key</code> on the source queue.
+    </div>
+
+    <div class="mini-diagram" id="dlqDiagram" style="height:240px;">
+      <div class="mini-box queue" style="left:30px;top:30px;width:110px;">Main Queue<br><span style="font-size:9px;opacity:0.7">TTL: 30s</span></div>
+      <div class="mini-box consumer" style="left:30px;top:140px;width:110px;">Consumer<br><span style="font-size:9px;opacity:0.7">processing...</span></div>
+      <div class="mini-box dlq" style="left:300px;top:30px;width:130px;">Dead Letter Exchange<br><span style="font-size:9px;opacity:0.7">routes dead letters</span></div>
+      <div class="mini-box dlq" style="left:550px;top:30px;width:110px;">DLQ<br><span style="font-size:9px;opacity:0.7">for analysis</span></div>
+      <div class="mini-box queue" style="left:300px;top:150px;width:130px;">Retry Queue<br><span style="font-size:9px;opacity:0.7">TTL: 5s, then re-route</span></div>
+      <div class="mini-box queue" style="left:550px;top:150px;width:110px;">Back to Main<br><span style="font-size:9px;opacity:0.7">auto-retry</span></div>
+      <svg class="mini-svg">
+        <path class="mini-arrow" d="M 85 75 L 85 140"/>
+        <path class="mini-arrow" d="M 140 50 L 300 50" style="stroke:#ff6b6b;"/>
+        <path class="mini-arrow" d="M 430 50 L 550 50"/>
+        <path class="mini-arrow" d="M 140 55 L 300 170" style="stroke:#fee140;"/>
+        <path class="mini-arrow" d="M 430 170 L 550 170"/>
+      </svg>
+      <div class="mini-label" style="left:180px;top:30px;color:#ff6b6b;">NACK / expired / overflow</div>
+      <div class="mini-label" style="left:180px;top:120px;color:#fee140;">retry path</div>
+      <div class="mini-label" style="left:560px;top:195px;color:#43e97b;">loop back after delay</div>
+    </div>
+
+    <div class="narration">
+      <strong>The Retry Pattern</strong> (interview gold):<br><br>
+      Instead of requeuing to the same queue (which causes tight loops), use a <em>delayed retry pattern</em>:<br><br>
+      1. Consumer NACKs → message goes to <strong>DL Exchange</strong><br>
+      2. DL Exchange routes to a <strong>Retry Queue</strong> with a TTL (e.g. 5 seconds)<br>
+      3. When TTL expires, the retry queue's own DL Exchange routes it <em>back to the main queue</em><br>
+      4. After N retries (tracked via <code>x-death</code> header), route to a <strong>permanent DLQ</strong> for manual inspection<br><br>
+      This gives you <em>exponential backoff</em> without custom code — just queue configuration!
+    </div>
+  </div>
+
+  <!-- ===== CHAPTER 6: CHEAT SHEET ===== -->
+  <div class="chapter" id="ch6">
+    <div class="chapter-title">Chapter 6: RabbitMQ Cheat Sheet</div>
+    <div class="chapter-subtitle">Everything on one page — quick reference for interviews</div>
+
+    <div class="ref-grid">
+      <div class="ref-card">
+        <h4>Core Components</h4>
+        <ul>
+          <li><span class="hl">Producer</span> — publishes messages to an exchange</li>
+          <li><span class="hl">Exchange</span> — routes messages to queues by rules</li>
+          <li><span class="hl">Binding</span> — link between exchange and queue (+ routing key)</li>
+          <li><span class="hl">Queue</span> — FIFO buffer that stores messages</li>
+          <li><span class="hl">Consumer</span> — subscribes to a queue, processes messages</li>
+          <li><span class="hl">Virtual Host</span> — logical isolation (like namespaces)</li>
+        </ul>
+      </div>
+      <div class="ref-card">
+        <h4>Delivery Guarantees</h4>
+        <ul>
+          <li><span class="tech">At-most-once</span> — auto-ack, fire and forget</li>
+          <li><span class="tech">At-least-once</span> — manual ACK after processing + publisher confirms</li>
+          <li><span class="tech">Exactly-once</span> — not natively supported; use idempotent consumers</li>
+          <li><span class="hl">Publisher Confirms</span> — broker ACKs back to producer</li>
+          <li><span class="hl">Mandatory flag</span> — returns msg if no matching queue</li>
+          <li><span class="hl">Persistent messages</span> — delivery_mode = 2 + durable queue</li>
+        </ul>
+      </div>
+      <div class="ref-card">
+        <h4>Durability & Persistence</h4>
+        <ul>
+          <li><span class="hl">Durable queue</span> — survives broker restart (metadata)</li>
+          <li><span class="hl">Persistent message</span> — written to disk (delivery_mode=2)</li>
+          <li>Both needed for true durability</li>
+          <li><span class="tech">Lazy queues</span> — write to disk immediately, reduce RAM</li>
+          <li><span class="tech">Quorum queues</span> — Raft-based replication for HA</li>
+          <li><span class="tech">Stream queues</span> — append-only log (Kafka-like)</li>
+        </ul>
+      </div>
+      <div class="ref-card">
+        <h4>Flow Control & Backpressure</h4>
+        <ul>
+          <li><span class="hl">Prefetch count</span> — max unACKed messages per consumer</li>
+          <li><span class="hl">Memory alarm</span> — blocks publishers at 40% RAM default</li>
+          <li><span class="hl">Disk alarm</span> — blocks publishers below disk threshold</li>
+          <li><span class="tech">Credit-based flow</span> — internal TCP socket flow control</li>
+          <li>Queue max-length — overflow drops or dead-letters</li>
+          <li>Consumer cancel notification when queue deleted</li>
+        </ul>
+      </div>
+      <div class="ref-card">
+        <h4>Dead Letter Queue (DLQ)</h4>
+        <ul>
+          <li>Triggered by: <span class="tech">NACK, TTL expiry, queue overflow</span></li>
+          <li>Config: <span class="tech">x-dead-letter-exchange</span> on source queue</li>
+          <li><span class="hl">x-death header</span> — tracks reason, count, timestamps</li>
+          <li>Retry pattern: DLQ → Retry Queue (TTL) → back to main</li>
+          <li>Permanent DLQ after max retries for manual triage</li>
+          <li>Monitor DLQ depth — alerts on accumulating failures</li>
+        </ul>
+      </div>
+      <div class="ref-card">
+        <h4>Interview Talking Points</h4>
+        <ul>
+          <li>"We use <span class="hl">publisher confirms + manual ACK</span> for at-least-once"</li>
+          <li>"<span class="hl">Prefetch=20</span> balances throughput with fair dispatch"</li>
+          <li>"DLQ with <span class="tech">retry pattern</span> handles transient failures"</li>
+          <li>"<span class="hl">Quorum queues</span> replaced mirrored queues for HA"</li>
+          <li>"We monitor <span class="tech">queue depth, consumer utilization, DLQ rate</span>"</li>
+          <li>"Idempotent consumers handle at-least-once duplicates"</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const steps = [
+      {
+        desc: "Step 1: Producers send telemetry data to RabbitMQ (independent of consumers)",
+        active: ["producer1", "producer2", "producer3"],
+        packet: { from: {x: 90, y: 120}, to: {x: 250, y: 180} },
+        popupPos: { x: 30, y: 350 },
+        popupTitle: "Producers — Data Sources",
+        popupDetails: [
+          "Send telemetry <span class='highlight'>independently</span> without knowing about consumers",
+          "PowerStore: <span class='tech'>performance metrics, capacity data</span>",
+          "PowerScale: <span class='tech'>file operations, NFS/SMB events</span>",
+          "Alerts: <span class='tech'>threshold violations, health status</span>",
+          "Use <span class='tech'>publisher confirms</span> for reliable delivery",
+          "No direct coupling to downstream processing"
+        ]
+      },
+      {
+        desc: "Step 2: RabbitMQ receives and routes messages to appropriate queues",
+        active: ["rabbitmq"],
+        packet: { from: {x: 320, y: 210}, to: {x: 450, y: 100} },
+        popupPos: { x: 250, y: 300 },
+        popupTitle: "RabbitMQ Broker — Message Router",
+        popupDetails: [
+          "<span class='highlight'>Topic exchange</span> routes messages based on routing keys",
+          "PowerStore metrics → <span class='tech'>telemetry.metrics.*</span>",
+          "PowerScale events → <span class='tech'>telemetry.events.*</span>",
+          "Alerts → <span class='tech'>telemetry.alerts.*</span>",
+          "Supports <span class='highlight'>fanout patterns</span> for multiple consumers",
+          "Buffering provides <span class='highlight'>decoupling</span> between producers/consumers"
+        ]
+      },
+      {
+        desc: "Step 3: Messages queue up, providing buffering and backpressure",
+        active: ["queue1", "queue2", "queue3"],
+        packet: { from: {x: 475, y: 120}, to: {x: 475, y: 140} },
+        popupPos: { x: 450, y: 350 },
+        popupTitle: "Message Queues — Buffer Layer",
+        popupDetails: [
+          "Each queue <span class='highlight'>buffers messages</span> for specific consumers",
+          "Queue depth monitored for <span class='highlight'>backpressure signals</span>",
+          "<span class='tech'>Durable queues</span> survive broker restarts",
+          "Consumer <span class='tech'>prefetch limits</span> prevent overload",
+          "Messages persist until <span class='highlight'>consumer acknowledgment</span>",
+          "Queue length triggers flow control when thresholds exceeded"
+        ]
+      },
+      {
+        desc: "Step 4: Consumers pull messages when ready (independent scaling)",
+        active: ["consumer1", "consumer2", "consumer3"],
+        packet: { from: {x: 550, y: 100}, to: {x: 650, y: 100} },
+        popupPos: { x: 600, y: 350 },
+        popupTitle: "Consumers — Independent Processing",
+        popupDetails: [
+          "Pull messages <span class='highlight'>at their own pace</span>",
+          "Data Processor: <span class='tech'>enrichment, aggregation</span>",
+          "Post Processor: <span class='tech'>business rules, anomaly detection</span>",
+          "Alert Handler: <span class='tech'>notifications, integrations</span>",
+          "<span class='highlight'>Horizontal scaling</span> - add more consumers as needed",
+          "Send <span class='tech'>ACK only after</span> successful downstream write"
+        ]
+      },
+      {
+        desc: "Step 5: Backpressure in action - RabbitMQ slows producers when queues fill",
+        active: ["rabbitmq", "queue1", "queue2", "queue3"],
+        packet: { from: {x: 200, y: 150}, to: {x: 200, y: 180} },
+        popupPos: { x: 150, y: 250 },
+        popupTitle: "Backpressure Mechanism",
+        popupDetails: [
+          "Queue depth exceeds <span class='highlight'>memory threshold</span>",
+          "RabbitMQ sends <span class='tech'>flow control signal</span> to TCP connections",
+          "Producers automatically <span class='highlight'>slow down or pause</span>",
+          "Prevents broker <span class='tech'>memory exhaustion</span>",
+          "Consumers catch up → flow control released",
+          "Like traffic light for data flow management"
+        ]
+      },
+      {
+        desc: "Step 6: Failed messages go to Dead Letter Queue (DLQ) for analysis",
+        active: ["dlq"],
+        packet: { from: {x: 500, y: 330}, to: {x: 500, y: 380} },
+        popupPos: { x: 450, y: 420 },
+        popupTitle: "Dead Letter Queue — Error Handling",
+        popupDetails: [
+          "Poison messages <span class='highlight'>automatically moved</span> to DLQ",
+          "Causes: <span class='tech'>schema validation failures, processing errors</span>",
+          "DLQ messages <span class='highlight'>preserved for analysis</span>",
+          "Alerting team monitors DLQ for issues",
+          "Manual reprocessing after fixing root cause",
+          "Prevents bad messages from blocking entire queue"
+        ]
+      }
+    ];
+    
+    let currentStep = -1;
+    let animationRunning = false;
+    let isMouseOverPopup = false;
+    let hideTimeout = null;
+    const popup = document.getElementById('detailPopup');
+    const popupTitle = document.getElementById('popupTitle');
+    const popupContent = document.getElementById('popupContent');
+    
+    // Add mouse event listeners to popup
+    popup.addEventListener('mouseenter', () => {
+      isMouseOverPopup = true;
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+        hideTimeout = null;
+      }
+    });
+    
+    popup.addEventListener('mouseleave', () => {
+      isMouseOverPopup = false;
+      if (animationRunning && currentStep >= 0) {
+        hideTimeout = setTimeout(() => {
+          if (!isMouseOverPopup) {
+            hidePopup().then(() => {
+              if (animationRunning) {
+                runStep(currentStep + 1);
+              }
+            });
+          }
+        }, 500);
+      }
+    });
+    
+    function clearHighlights() {
+      document.querySelectorAll('.component').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.step-dot').forEach(d => d.classList.remove('active'));
+      document.querySelectorAll('.queue-item').forEach(q => q.classList.remove('filled'));
+    }
+    
+    function showPopup(step) {
+      popupTitle.textContent = step.popupTitle;
+      popupContent.innerHTML = step.popupDetails.map(d => `<li>${d}</li>`).join('');
+      popup.style.left = step.popupPos.x + 'px';
+      popup.style.top = step.popupPos.y + 'px';
+      popup.classList.remove('hide');
+      popup.classList.add('show');
+      isMouseOverPopup = false;
+    }
+    
+    function hidePopup() {
+      return new Promise(resolve => {
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = null;
+        }
+        popup.classList.remove('show');
+        popup.classList.add('hide');
+        setTimeout(resolve, 1000);
+      });
+    }
+    
+    function animatePacket(from, to, duration = 800) {
+      return new Promise(resolve => {
+        const packet = document.getElementById('packet1');
+        packet.style.left = from.x + 'px';
+        packet.style.top = from.y + 'px';
+        packet.style.opacity = '1';
+        packet.style.transition = `all ${duration}ms ease-in-out`;
+        
+        setTimeout(() => {
+          packet.style.left = to.x + 'px';
+          packet.style.top = to.y + 'px';
+        }, 50);
+        
+        setTimeout(() => {
+          packet.style.opacity = '0';
+          resolve();
+        }, duration + 100);
+      });
+    }
+    
+    function fillQueue(queueId, count) {
+      const queue = document.getElementById(queueId + '-visual');
+      const items = queue.querySelectorAll('.queue-item');
+      for (let i = 0; i < Math.min(count, items.length); i++) {
+        setTimeout(() => {
+          items[i].classList.add('filled');
+        }, i * 100);
+      }
+    }
+    
+    async function runStep(stepIndex) {
+      if (stepIndex >= steps.length) {
+        await hidePopup();
+        document.getElementById('stepDesc').textContent = "✓ Complete! RabbitMQ provides reliable decoupling with backpressure control.";
+        animationRunning = false;
+        return;
+      }
+      
+      currentStep = stepIndex;
+      const step = steps[stepIndex];
+      
+      if (stepIndex > 0) {
+        await hidePopup();
+      }
+      
+      clearHighlights();
+      
+      // Highlight active components
+      step.active.forEach(id => {
+        document.getElementById(id).classList.add('active');
+      });
+      
+      // Update step indicator
+      document.getElementById('dot' + (stepIndex + 1)).classList.add('active');
+      
+      // Update description
+      document.getElementById('stepDesc').textContent = step.desc;
+      
+      // Animate packet
+      await animatePacket(step.packet.from, step.packet.to);
+      
+      // Show queue filling for step 3
+      if (stepIndex === 2) {
+        fillQueue('queue1', 4);
+        fillQueue('queue2', 3);
+        fillQueue('queue3', 2);
+      }
+      
+      // Show popup with details
+      showPopup(step);
+      
+      // Wait for either timeout or mouse leave
+      await new Promise(resolve => {
+        const checkAndProceed = () => {
+          if (!isMouseOverPopup) {
+            resolve();
+          } else {
+            setTimeout(checkAndProceed, 100);
+          }
+        };
+        
+        setTimeout(() => {
+          checkAndProceed();
+        }, 3500);
+      });
+      
+      if (animationRunning) {
+        runStep(stepIndex + 1);
+      }
+    }
+    
+    function startAnimation() {
+      if (animationRunning) return;
+      animationRunning = true;
+      currentStep = -1;
+      clearHighlights();
+      popup.classList.remove('show', 'hide');
+      runStep(0);
+    }
+    
+    function resetAnimation() {
+      animationRunning = false;
+      currentStep = -1;
+      clearHighlights();
+      document.getElementById('packet1').style.opacity = '0';
+      popup.classList.remove('show');
+      popup.classList.add('hide');
+      document.getElementById('stepDesc').textContent = "Click \"Start Animation\" to see RabbitMQ message flow";
+    }
+
+    // ===== CHAPTER NAVIGATION =====
+    function showChapter(n) {
+      for (let i = 1; i <= 6; i++) {
+        const ch = document.getElementById('ch' + i);
+        const btn = document.getElementById('chBtn' + i);
+        if (i === n && !ch.classList.contains('visible')) {
+          ch.classList.add('visible');
+          btn.classList.add('active');
+        } else if (i === n && ch.classList.contains('visible')) {
+          ch.classList.remove('visible');
+          btn.classList.remove('active');
+        } else {
+          ch.classList.remove('visible');
+          btn.classList.remove('active');
+        }
+      }
+    }
+
+    // ===== MINI PACKET ANIMATOR =====
+    function miniAnimate(pktId, fromX, fromY, toX, toY, dur) {
+      return new Promise(resolve => {
+        const p = document.getElementById(pktId);
+        if (!p) { resolve(); return; }
+        p.style.transition = 'none';
+        p.style.left = fromX + 'px';
+        p.style.top = fromY + 'px';
+        p.style.opacity = '1';
+        setTimeout(() => {
+          p.style.transition = `all ${dur}ms ease-in-out`;
+          p.style.left = toX + 'px';
+          p.style.top = toY + 'px';
+        }, 30);
+        setTimeout(() => { p.style.opacity = '0'; resolve(); }, dur + 80);
+      });
+    }
+
+    // ===== CH1: POST OFFICE =====
+    async function animatePostOffice() {
+      await miniAnimate('po-pkt1', 90, 50, 290, 85, 600);
+      await miniAnimate('po-pkt1', 330, 80, 510, 45, 500);
+      await miniAnimate('po-pkt1', 550, 45, 720, 45, 500);
+      miniAnimate('po-pkt2', 90, 140, 290, 105, 600);
+      await new Promise(r => setTimeout(r, 650));
+      await miniAnimate('po-pkt2', 330, 100, 510, 135, 500);
+      await miniAnimate('po-pkt2', 550, 135, 720, 135, 500);
+    }
+
+    // ===== CH2: EXCHANGE TYPE TABS =====
+    function showExchange(type) {
+      ['direct','topic','fanout','headers'].forEach(t => {
+        const panel = document.getElementById('panel-' + t);
+        panel.classList.toggle('visible', t === type);
+      });
+      document.querySelectorAll('.exchange-tabs button').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    async function animateDirect() {
+      await miniAnimate('direct-pkt', 100, 100, 280, 100, 500);
+      await miniAnimate('direct-pkt', 330, 90, 510, 48, 500);
+    }
+    async function animateTopic() {
+      await miniAnimate('topic-pkt', 110, 100, 280, 100, 500);
+      miniAnimate('topic-pkt', 330, 90, 520, 38, 450);
+      const p2 = document.getElementById('topic-pkt');
+      await new Promise(r => setTimeout(r, 500));
+      // second copy to "All Created"
+      const clone = p2.cloneNode(true);
+      clone.id = 'topic-pkt-clone';
+      p2.parentElement.appendChild(clone);
+      await miniAnimate('topic-pkt-clone', 330, 100, 520, 105, 450);
+      clone.remove();
+    }
+    async function animateFanout() {
+      await miniAnimate('fanout-pkt1', 100, 100, 290, 100, 500);
+      miniAnimate('fanout-pkt1', 330, 90, 520, 38, 400);
+      miniAnimate('fanout-pkt2', 330, 100, 520, 105, 400);
+      miniAnimate('fanout-pkt3', 330, 110, 520, 175, 400);
+    }
+    async function animateHeaders() {
+      await miniAnimate('headers-pkt', 100, 100, 280, 100, 500);
+      // goes to first two queues (match)
+      const p = document.getElementById('headers-pkt');
+      const clone = p.cloneNode(true);
+      clone.id = 'headers-pkt-clone';
+      p.parentElement.appendChild(clone);
+      miniAnimate('headers-pkt', 330, 90, 520, 48, 450);
+      await miniAnimate('headers-pkt-clone', 330, 100, 520, 115, 450);
+      clone.remove();
+    }
+
+    // ===== CH3: ACK/NACK DEMO =====
+    let ackMessages = [];
+    let ackCursor = 0;
+
+    function initAckDemo() {
+      ackMessages = [];
+      ackCursor = 0;
+      for (let i = 1; i <= 8; i++) ackMessages.push({ id: i, state: 'waiting' });
+      // Deliver first message
+      if (ackMessages.length) ackMessages[0].state = 'inflight';
+      renderAckQueue();
+      document.getElementById('ackLog').innerHTML = 'Waiting for you to process messages...';
+    }
+
+    function renderAckQueue() {
+      const el = document.getElementById('ackQueue');
+      if (!el) return;
+      el.innerHTML = ackMessages.map(m =>
+        `<div class="h-msg ${m.state}">${m.id}</div>`
+      ).join('');
+    }
+
+    function ackDemo(action) {
+      if (ackCursor >= ackMessages.length) return;
+      const msg = ackMessages[ackCursor];
+      const log = document.getElementById('ackLog');
+      const ts = new Date().toLocaleTimeString();
+
+      if (action === 'ack') {
+        msg.state = 'acked';
+        log.innerHTML += `<br><span class="log-ack">[${ts}] MSG ${msg.id}: ACK ✓ — removed from queue</span>`;
+        ackCursor++;
+        if (ackCursor < ackMessages.length) ackMessages[ackCursor].state = 'inflight';
+      } else if (action === 'nack') {
+        msg.state = 'nacked';
+        log.innerHTML += `<br><span class="log-nack">[${ts}] MSG ${msg.id}: NACK ✗ — sent to DLQ</span>`;
+        ackCursor++;
+        if (ackCursor < ackMessages.length) ackMessages[ackCursor].state = 'inflight';
+      } else if (action === 'nack-requeue') {
+        msg.state = 'waiting';
+        // Move to end
+        ackMessages.splice(ackCursor, 1);
+        ackMessages.push(msg);
+        log.innerHTML += `<br><span class="log-warn">[${ts}] MSG ${msg.id}: NACK + Requeue ↻ — back to queue tail</span>`;
+        if (ackCursor < ackMessages.length) ackMessages[ackCursor].state = 'inflight';
+      }
+
+      if (ackCursor >= ackMessages.length) {
+        log.innerHTML += `<br><span class="log-info">[${ts}] All messages processed!</span>`;
+      }
+      renderAckQueue();
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function resetAckDemo() { initAckDemo(); }
+
+    // ===== CH4: PREFETCH DEMO =====
+    let pfMessages = [];
+    let pfInflight = 0;
+    let pfNextDeliver = 0;
+    let pfPrefetch = 3;
+
+    function initPrefetchDemo() {
+      pfMessages = [];
+      pfInflight = 0;
+      pfNextDeliver = 0;
+      pfPrefetch = parseInt(document.getElementById('prefetchSlider').value);
+      for (let i = 1; i <= 12; i++) pfMessages.push({ id: i, state: 'waiting' });
+      deliverUpToPrefetch();
+      renderPrefetchQueue();
+      document.getElementById('prefetchLog').innerHTML = `Prefetch = ${pfPrefetch}. ${pfPrefetch} messages delivered, waiting for ACK...`;
+    }
+
+    function deliverUpToPrefetch() {
+      while (pfInflight < pfPrefetch && pfNextDeliver < pfMessages.length) {
+        pfMessages[pfNextDeliver].state = 'inflight';
+        pfNextDeliver++;
+        pfInflight++;
+      }
+    }
+
+    function renderPrefetchQueue() {
+      const el = document.getElementById('prefetchQueue');
+      if (!el) return;
+      el.innerHTML = pfMessages.map(m =>
+        `<div class="h-msg ${m.state}">${m.id}</div>`
+      ).join('');
+    }
+
+    function updatePrefetch() {
+      pfPrefetch = parseInt(document.getElementById('prefetchSlider').value);
+      document.getElementById('prefetchVal').textContent = pfPrefetch;
+      // Re-init with new prefetch
+      initPrefetchDemo();
+    }
+
+    function prefetchAck() {
+      // ACK the first inflight message
+      const idx = pfMessages.findIndex(m => m.state === 'inflight');
+      if (idx === -1) return;
+      const msg = pfMessages[idx];
+      msg.state = 'acked';
+      pfInflight--;
+
+      const log = document.getElementById('prefetchLog');
+      const ts = new Date().toLocaleTimeString();
+      log.innerHTML += `<br><span class="log-ack">[${ts}] ACK MSG ${msg.id} — inflight: ${pfInflight}/${pfPrefetch}</span>`;
+
+      // Deliver next if room
+      deliverUpToPrefetch();
+
+      if (pfNextDeliver > pfInflight + pfMessages.filter(m => m.state === 'acked').length) {
+        const newMsg = pfMessages.find(m => m.state === 'inflight' && pfMessages.indexOf(m) === pfNextDeliver - 1);
+        if (newMsg) {
+          log.innerHTML += `<br><span class="log-info">[${ts}] → Delivered MSG ${newMsg.id} (slot freed)</span>`;
+        }
+      }
+
+      const allDone = pfMessages.every(m => m.state === 'acked');
+      if (allDone) {
+        log.innerHTML += `<br><span class="log-info">[${ts}] All 12 messages processed!</span>`;
+      }
+
+      renderPrefetchQueue();
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function resetPrefetchDemo() { initPrefetchDemo(); }
+
+    // Initialize demos when first shown
+    let demosInitialized = false;
+    const origShowChapter = showChapter;
+    showChapter = function(n) {
+      origShowChapter(n);
+      if (!demosInitialized) {
+        initAckDemo();
+        initPrefetchDemo();
+        demosInitialized = true;
+      }
+    };
+
+    // Init on load so demos are ready
+    window.addEventListener('DOMContentLoaded', () => {
+      initAckDemo();
+      initPrefetchDemo();
+    });
+  </script>
+</body>
+</html>

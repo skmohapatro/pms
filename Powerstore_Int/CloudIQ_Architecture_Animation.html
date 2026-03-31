@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dell CloudIQ / AIOps Architecture - Animated Data Flow</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 28px;
+      color: #00d4ff;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .container {
+      position: relative;
+      width: 1100px;
+      height: 700px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.03);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    /* Component boxes */
+    .component {
+      position: absolute;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .component:hover {
+      transform: scale(1.05);
+      z-index: 100;
+    }
+    .component .label {
+      font-size: 10px;
+      opacity: 0.7;
+      margin-top: 4px;
+      font-weight: 400;
+    }
+    
+    /* Color coding by layer */
+    .ingestion { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .messaging { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .processing { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #1a1a2e; }
+    .storage { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #1a1a2e; }
+    .api { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #1a1a2e; }
+    .consumer { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #1a1a2e; }
+    
+    /* Arrows (SVG paths) */
+    svg.arrows {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .arrow-path {
+      fill: none;
+      stroke: rgba(255,255,255,0.3);
+      stroke-width: 2;
+    }
+    
+    /* Data packets */
+    .packet {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #00d4ff;
+      box-shadow: 0 0 10px #00d4ff, 0 0 20px #00d4ff;
+      opacity: 0;
+      z-index: 50;
+    }
+    
+    /* Step indicator */
+    .step-indicator {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .step-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      transition: all 0.3s ease;
+    }
+    .step-dot.active {
+      background: #00d4ff;
+      box-shadow: 0 0 10px #00d4ff;
+    }
+    
+    /* Legend */
+    .legend {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.5);
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 11px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+    
+    /* Step description */
+    .step-desc {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+      min-width: 400px;
+      border: 1px solid #00d4ff;
+    }
+    
+    /* Controls */
+    .controls {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .controls button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: #fff;
+      padding: 12px 30px;
+      font-size: 14px;
+      border-radius: 25px;
+      cursor: pointer;
+      margin: 0 10px;
+      transition: all 0.3s ease;
+    }
+    .controls button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.5);
+    }
+    
+    /* Highlight active component */
+    .component.active {
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+      50% { box-shadow: 0 4px 30px rgba(0,212,255,0.6); }
+    }
+    
+    /* Detail Popup */
+    .detail-popup {
+      position: absolute;
+      background: linear-gradient(135deg, rgba(20, 30, 48, 0.98) 0%, rgba(36, 59, 85, 0.98) 100%);
+      border: 2px solid #00d4ff;
+      border-radius: 12px;
+      padding: 18px 22px;
+      max-width: 320px;
+      z-index: 200;
+      opacity: 0;
+      transform: scale(0.8) translateY(-10px);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: auto;
+      box-shadow: 0 10px 40px rgba(0, 212, 255, 0.3), 0 0 20px rgba(0, 212, 255, 0.2);
+    }
+    .detail-popup.show {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+    .detail-popup.hide {
+      opacity: 0;
+      transform: scale(0.9) translateY(10px);
+    }
+    .detail-popup h3 {
+      color: #00d4ff;
+      font-size: 15px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .detail-popup h3::before {
+      content: "●";
+      font-size: 10px;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .detail-popup ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .detail-popup li {
+      font-size: 12px;
+      color: #ccc;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-left: 12px;
+      position: relative;
+    }
+    .detail-popup li:last-child {
+      border-bottom: none;
+    }
+    .detail-popup li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: #00d4ff;
+      font-size: 10px;
+    }
+    .detail-popup .highlight {
+      color: #43e97b;
+      font-weight: 600;
+    }
+    .detail-popup .tech {
+      color: #f5576c;
+      font-weight: 600;
+    }
+
+    /* --- All Cards Grid (persistent, always-visible) --- */
+    .all-cards-section {
+      max-width: 1100px;
+      margin: 30px auto 0;
+      display: none;
+    }
+    .all-cards-section.visible {
+      display: block;
+    }
+    .all-cards-heading {
+      text-align: center;
+      font-size: 22px;
+      color: #00d4ff;
+      margin-bottom: 20px;
+    }
+    .all-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .ref-card {
+      background: linear-gradient(135deg, rgba(20, 30, 48, 0.98) 0%, rgba(36, 59, 85, 0.98) 100%);
+      border: 2px solid rgba(0, 212, 255, 0.45);
+      border-radius: 12px;
+      padding: 18px 22px;
+      box-shadow: 0 6px 24px rgba(0, 212, 255, 0.12);
+      transition: border-color 0.25s ease;
+    }
+    .ref-card:hover {
+      border-color: #00d4ff;
+    }
+    .ref-card .step-num {
+      display: inline-block;
+      background: #00d4ff;
+      color: #0b1020;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 9px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .ref-card h3 {
+      color: #00d4ff;
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+    .ref-card ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .ref-card li {
+      font-size: 12px;
+      color: #ccc;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-left: 14px;
+      position: relative;
+      line-height: 1.35;
+    }
+    .ref-card li:last-child {
+      border-bottom: none;
+    }
+    .ref-card li::before {
+      content: "\2192";
+      position: absolute;
+      left: 0;
+      color: #00d4ff;
+      font-size: 10px;
+    }
+    .ref-card .highlight {
+      color: #43e97b;
+      font-weight: 600;
+    }
+    .ref-card .tech {
+      color: #f5576c;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dell CloudIQ / AIOps Architecture</h1>
+  <p class="subtitle">Animated Data Flow Visualization</p>
+  
+  <div class="container" id="diagram">
+    <!-- INGESTION LAYER -->
+    <div class="component ingestion" id="landing" style="left: 30px; top: 80px; width: 100px;">
+      Landing Zone
+      <div class="label">Raw Telemetry</div>
+    </div>
+    
+    <div class="component ingestion" id="processor" style="left: 180px; top: 80px; width: 140px;">
+      Product Data Processor
+      <div class="label">Validate & Route</div>
+    </div>
+    
+    <div class="component ingestion" id="schema" style="left: 180px; top: 180px; width: 140px;">
+      Schema Manager
+      <div class="label">Telemetry Metadata</div>
+    </div>
+    
+    <!-- MESSAGING LAYER -->
+    <div class="component messaging" id="rabbitmq" style="left: 380px; top: 80px; width: 120px;">
+      RabbitMQ
+      <div class="label">Message Broker</div>
+    </div>
+    
+    <!-- PROCESSING LAYER -->
+    <div class="component processing" id="gdp" style="left: 560px; top: 80px; width: 130px;">
+      Generic Data Processor
+      <div class="label">Enrich & Aggregate</div>
+    </div>
+    
+    <div class="component processing" id="postproc" style="left: 560px; top: 200px; width: 130px;">
+      Post Processing Consumer
+      <div class="label">Business Rules</div>
+    </div>
+    
+    <!-- STORAGE LAYER -->
+    <div class="component storage" id="cassandra" style="left: 750px; top: 80px; width: 120px;">
+      GDS (Cassandra)
+      <div class="label">Time-Series Data</div>
+    </div>
+    
+    <div class="component storage" id="postgres" style="left: 750px; top: 200px; width: 120px;">
+      PostgreSQL
+      <div class="label">Relational Data</div>
+    </div>
+    
+    <div class="component storage" id="tenant" style="left: 750px; top: 320px; width: 120px;">
+      Tenant Domain
+      <div class="label">Isolation Layer</div>
+    </div>
+    
+    <!-- API LAYER -->
+    <div class="component api" id="dataapi" style="left: 920px; top: 140px; width: 130px;">
+      Data API Access
+      <div class="label">Gateway + Auth</div>
+    </div>
+    
+    <!-- CONSUMERS -->
+    <div class="component consumer" id="dashboards" style="left: 920px; top: 280px; width: 130px;">
+      Dashboards
+      <div class="label">Real-time Views</div>
+    </div>
+    
+    <div class="component consumer" id="ml" style="left: 920px; top: 380px; width: 130px;">
+      ML Pipelines
+      <div class="label">Anomaly Detection</div>
+    </div>
+    
+    <div class="component consumer" id="alerts" style="left: 920px; top: 480px; width: 130px;">
+      Alerting
+      <div class="label">Notifications</div>
+    </div>
+    
+    <!-- SVG Arrows -->
+    <svg class="arrows">
+      <!-- Landing -> Processor -->
+      <path id="path1" class="arrow-path" d="M 130 100 L 180 100" />
+      <!-- Processor -> Schema -->
+      <path id="path2" class="arrow-path" d="M 250 130 L 250 180" />
+      <!-- Processor -> RabbitMQ -->
+      <path id="path3" class="arrow-path" d="M 320 100 L 380 100" />
+      <!-- RabbitMQ -> GDP -->
+      <path id="path4" class="arrow-path" d="M 500 100 L 560 100" />
+      <!-- RabbitMQ -> PostProc -->
+      <path id="path5" class="arrow-path" d="M 440 130 Q 440 220 560 220" />
+      <!-- GDP -> Cassandra -->
+      <path id="path6" class="arrow-path" d="M 690 100 L 750 100" />
+      <!-- PostProc -> Postgres -->
+      <path id="path7" class="arrow-path" d="M 690 220 L 750 220" />
+      <!-- PostProc -> Tenant -->
+      <path id="path8" class="arrow-path" d="M 625 250 L 625 340 L 750 340" />
+      <!-- Cassandra -> DataAPI -->
+      <path id="path9" class="arrow-path" d="M 870 100 Q 900 100 935 140" />
+      <!-- Postgres -> DataAPI -->
+      <path id="path10" class="arrow-path" d="M 870 220 Q 900 200 920 180" />
+      <!-- DataAPI -> Dashboards -->
+      <path id="path11" class="arrow-path" d="M 985 190 L 985 280" />
+      <!-- DataAPI -> ML -->
+      <path id="path12" class="arrow-path" d="M 985 190 L 985 380" />
+      <!-- DataAPI -> Alerts -->
+      <path id="path13" class="arrow-path" d="M 985 190 L 985 480" />
+    </svg>
+    
+    <!-- Data packets (created dynamically) -->
+    <div class="packet" id="packet1"></div>
+    <div class="packet" id="packet2"></div>
+    <div class="packet" id="packet3"></div>
+    
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color ingestion"></div> Ingestion</div>
+      <div class="legend-item"><div class="legend-color messaging"></div> Messaging</div>
+      <div class="legend-item"><div class="legend-color processing"></div> Processing</div>
+      <div class="legend-item"><div class="legend-color storage"></div> Storage</div>
+      <div class="legend-item"><div class="legend-color api"></div> API Layer</div>
+      <div class="legend-item"><div class="legend-color consumer"></div> Consumers</div>
+    </div>
+    
+    <!-- Step description -->
+    <div class="step-desc" id="stepDesc">Click "Start Animation" to see data flow</div>
+    
+    <!-- Detail Popup -->
+    <div class="detail-popup" id="detailPopup">
+      <h3 id="popupTitle">Component Details</h3>
+      <ul id="popupContent"></ul>
+    </div>
+    
+    <!-- Step indicators -->
+    <div class="step-indicator">
+      <div class="step-dot" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+      <div class="step-dot" id="dot3"></div>
+      <div class="step-dot" id="dot4"></div>
+      <div class="step-dot" id="dot5"></div>
+      <div class="step-dot" id="dot6"></div>
+      <div class="step-dot" id="dot7"></div>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <button onclick="startAnimation()">▶ Start Animation</button>
+    <button onclick="resetAnimation()">↺ Reset</button>
+    <button onclick="toggleAllCards()">📋 Show All Details</button>
+  </div>
+
+  <!-- Persistent all-cards grid for reading/studying -->
+  <div class="all-cards-section" id="allCardsSection">
+    <div class="all-cards-heading">All Component Details (Quick Reference)</div>
+    <div class="all-cards-grid" id="allCardsGrid"></div>
+  </div>
+  
+  <script>
+    const steps = [
+      {
+        desc: "Step 1: Raw telemetry arrives at Landing Zone from storage arrays",
+        active: ["landing"],
+        packet: { from: {x: 10, y: 100}, to: {x: 80, y: 100} },
+        popupPos: { x: 30, y: 140 },
+        popupTitle: "Landing Zone — Ingestion Entry Point",
+        popupDetails: [
+          "Receives <span class='highlight'>raw telemetry</span> from Dell storage products (PowerStore, PowerScale, etc.)",
+          "Data types: <span class='tech'>objects, metrics, events, alerts</span>",
+          "Acts as a <span class='highlight'>buffer/staging area</span> before processing",
+          "Handles <span class='highlight'>500K+ events/sec</span> peak throughput",
+          "First checkpoint for data integrity validation"
+        ]
+      },
+      {
+        desc: "Step 2: Product Data Processor validates, normalizes, and routes data",
+        active: ["processor", "schema"],
+        packet: { from: {x: 130, y: 100}, to: {x: 250, y: 100} },
+        popupPos: { x: 180, y: 240 },
+        popupTitle: "Product Data Processor + Schema Manager",
+        popupDetails: [
+          "<span class='highlight'>Validates</span> incoming payloads against registered schemas",
+          "<span class='highlight'>Normalizes</span> data formats (timestamps, units, IDs)",
+          "Routes messages to appropriate <span class='tech'>RabbitMQ exchanges</span>",
+          "Schema Manager ensures <span class='highlight'>backward compatibility</span>",
+          "Registers new schemas, rejects malformed data to <span class='tech'>DLQ</span>"
+        ]
+      },
+      {
+        desc: "Step 3: Messages published to RabbitMQ (decoupling + backpressure)",
+        active: ["rabbitmq"],
+        packet: { from: {x: 320, y: 100}, to: {x: 440, y: 100} },
+        popupPos: { x: 380, y: 140 },
+        popupTitle: "RabbitMQ — Message Broker",
+        popupDetails: [
+          "<span class='highlight'>Decouples</span> producers from consumers (independent scaling)",
+          "Provides <span class='highlight'>backpressure</span> via queue buffering",
+          "Uses <span class='tech'>publisher confirms</span> for at-least-once delivery",
+          "Consumer <span class='tech'>prefetch limits</span> prevent overload",
+          "Messages <span class='highlight'>ack'd only after</span> successful downstream write",
+          "Supports topic/fanout routing for multi-product telemetry"
+        ]
+      },
+      {
+        desc: "Step 4: Generic Data Processor enriches & aggregates telemetry",
+        active: ["gdp", "postproc"],
+        packet: { from: {x: 500, y: 100}, to: {x: 625, y: 100} },
+        popupPos: { x: 450, y: 260 },
+        popupTitle: "Processing Layer — Enrich & Aggregate",
+        popupDetails: [
+          "<span class='highlight'>Enrichment</span>: maps IDs → asset hierarchy (cluster → node → volume)",
+          "Attaches <span class='tech'>tenant/customer context</span> for isolation",
+          "Normalizes units and timestamps across products",
+          "<span class='highlight'>Aggregation</span>: rolls up metrics (5m, 1h, 1d buckets)",
+          "Computes KPIs: <span class='tech'>latency p95/p99, capacity %, error rates</span>",
+          "Stateless processing enables <span class='highlight'>horizontal scaling</span>"
+        ]
+      },
+      {
+        desc: "Step 5: Data stored in Cassandra (time-series) and PostgreSQL (relational)",
+        active: ["cassandra", "postgres", "tenant"],
+        packet: { from: {x: 690, y: 100}, to: {x: 810, y: 100} },
+        popupPos: { x: 620, y: 380 },
+        popupTitle: "Polyglot Storage — Cassandra + PostgreSQL",
+        popupDetails: [
+          "<span class='tech'>Cassandra (GDS)</span>: high-volume time-series writes",
+          "Partitioned by <span class='highlight'>asset ID + time bucket</span>",
+          "TTL-based retention (90 days hot, 2 years cold)",
+          "<span class='tech'>PostgreSQL</span>: tenant config, metadata, relationships",
+          "ACID transactions where <span class='highlight'>correctness > throughput</span>",
+          "<span class='highlight'>Tenant Domain</span>: logical isolation + RLS policies"
+        ]
+      },
+      {
+        desc: "Step 6: Data API Access exposes data with auth, rate limiting, tenant context",
+        active: ["dataapi"],
+        packet: { from: {x: 870, y: 160}, to: {x: 985, y: 160} },
+        popupPos: { x: 750, y: 200 },
+        popupTitle: "Data API Access — Gateway Layer",
+        popupDetails: [
+          "<span class='highlight'>Unified gateway</span> for all CloudIQ data consumers",
+          "Enforces <span class='tech'>authentication & authorization</span>",
+          "<span class='highlight'>Rate limiting</span> per tenant (429 + retry-after)",
+          "Injects <span class='tech'>tenant context</span> into every request",
+          "Supports time-range queries, <span class='highlight'>downsampling</span>",
+          "Exposes both Cassandra (metrics) and Postgres (config) data"
+        ]
+      },
+      {
+        desc: "Step 7: Consumers query for dashboards, ML anomaly detection, and alerts",
+        active: ["dashboards", "ml", "alerts"],
+        packet: { from: {x: 985, y: 190}, to: {x: 985, y: 380} },
+        popupPos: { x: 750, y: 440 },
+        popupTitle: "CloudIQ Data Consumers",
+        popupDetails: [
+          "<span class='tech'>Dashboards</span>: real-time & historical views (<span class='highlight'>&lt;30s p99 latency</span>)",
+          "<span class='tech'>ML Pipelines</span>: anomaly detection, capacity forecasting",
+          "<span class='tech'>Alerting</span>: push notifications, ServiceNow/email integrations",
+          "<span class='tech'>Reporting</span>: compliance, SLA reports",
+          "All queries scoped by <span class='highlight'>tenant context</span>",
+          "Observability: Prometheus/Grafana, Jaeger traces"
+        ]
+      }
+    ];
+    
+    let currentStep = -1;
+    let animationRunning = false;
+    let isMouseOverPopup = false;
+    let hideTimeout = null;
+    const popup = document.getElementById('detailPopup');
+    const popupTitle = document.getElementById('popupTitle');
+    const popupContent = document.getElementById('popupContent');
+    
+    // Add mouse event listeners to popup
+    popup.addEventListener('mouseenter', () => {
+      isMouseOverPopup = true;
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+        hideTimeout = null;
+      }
+    });
+    
+    popup.addEventListener('mouseleave', () => {
+      isMouseOverPopup = false;
+      if (animationRunning && currentStep >= 0) {
+        // Start hiding after a short delay when mouse leaves
+        hideTimeout = setTimeout(() => {
+          if (!isMouseOverPopup) {
+            hidePopup().then(() => {
+              if (animationRunning) {
+                runStep(currentStep + 1);
+              }
+            });
+          }
+        }, 500);
+      }
+    });
+    
+    function clearHighlights() {
+      document.querySelectorAll('.component').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.step-dot').forEach(d => d.classList.remove('active'));
+    }
+    
+    function showPopup(step) {
+      popupTitle.textContent = step.popupTitle;
+      popupContent.innerHTML = step.popupDetails.map(d => `<li>${d}</li>`).join('');
+      popup.style.left = step.popupPos.x + 'px';
+      popup.style.top = step.popupPos.y + 'px';
+      popup.classList.remove('hide');
+      popup.classList.add('show');
+      isMouseOverPopup = false;
+    }
+    
+    function hidePopup() {
+      return new Promise(resolve => {
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = null;
+        }
+        popup.classList.remove('show');
+        popup.classList.add('hide');
+        setTimeout(resolve, 1000);
+      });
+    }
+    
+    function animatePacket(from, to, duration = 800) {
+      return new Promise(resolve => {
+        const packet = document.getElementById('packet1');
+        packet.style.left = from.x + 'px';
+        packet.style.top = from.y + 'px';
+        packet.style.opacity = '1';
+        packet.style.transition = `all ${duration}ms ease-in-out`;
+        
+        setTimeout(() => {
+          packet.style.left = to.x + 'px';
+          packet.style.top = to.y + 'px';
+        }, 50);
+        
+        setTimeout(() => {
+          packet.style.opacity = '0';
+          resolve();
+        }, duration + 100);
+      });
+    }
+    
+    async function runStep(stepIndex) {
+      if (stepIndex >= steps.length) {
+        await hidePopup();
+        document.getElementById('stepDesc').textContent = "✓ Complete! Data flows from ingestion to consumers.";
+        animationRunning = false;
+        return;
+      }
+      
+      currentStep = stepIndex;
+      const step = steps[stepIndex];
+      
+      // Hide previous popup first
+      if (stepIndex > 0) {
+        await hidePopup();
+      }
+      
+      clearHighlights();
+      
+      // Highlight active components
+      step.active.forEach(id => {
+        document.getElementById(id).classList.add('active');
+      });
+      
+      // Update step indicator
+      document.getElementById('dot' + (stepIndex + 1)).classList.add('active');
+      
+      // Update description
+      document.getElementById('stepDesc').textContent = step.desc;
+      
+      // Animate packet
+      await animatePacket(step.packet.from, step.packet.to);
+      
+      // Show popup with details
+      showPopup(step);
+      
+      // Wait for either timeout or mouse leave
+      await new Promise(resolve => {
+        const checkAndProceed = () => {
+          if (!isMouseOverPopup) {
+            resolve();
+          } else {
+            // Check again after 100ms
+            setTimeout(checkAndProceed, 100);
+          }
+        };
+        
+        // Initial wait time (3.5 seconds)
+        setTimeout(() => {
+          checkAndProceed();
+        }, 3500);
+      });
+      
+      if (animationRunning) {
+        runStep(stepIndex + 1);
+      }
+    }
+    
+    function startAnimation() {
+      if (animationRunning) return;
+      animationRunning = true;
+      currentStep = -1;
+      clearHighlights();
+      popup.classList.remove('show', 'hide');
+      runStep(0);
+    }
+    
+    function resetAnimation() {
+      animationRunning = false;
+      currentStep = -1;
+      clearHighlights();
+      document.getElementById('packet1').style.opacity = '0';
+      popup.classList.remove('show');
+      popup.classList.add('hide');
+      document.getElementById('stepDesc').textContent = "Click \"Start Animation\" to see data flow";
+    }
+
+    // --- All Cards (persistent grid) ---
+    function renderAllCards() {
+      const grid = document.getElementById('allCardsGrid');
+      if (grid.children.length > 0) return; // already rendered
+      steps.forEach((step, i) => {
+        const card = document.createElement('div');
+        card.className = 'ref-card';
+        card.innerHTML = `<span class="step-num">Step ${i + 1}</span>`
+          + `<h3>${step.popupTitle}</h3>`
+          + `<ul>${step.popupDetails.map(d => '<li>' + d + '</li>').join('')}</ul>`;
+        grid.appendChild(card);
+      });
+    }
+
+    function toggleAllCards() {
+      const section = document.getElementById('allCardsSection');
+      const isVisible = section.classList.contains('visible');
+      if (!isVisible) {
+        renderAllCards();
+        section.classList.add('visible');
+      } else {
+        section.classList.remove('visible');
+      }
+    }
+  </script>
+</body>
+</html>

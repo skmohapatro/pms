@@ -1,7 +1,9 @@
 """Flask backend for Dell GenAI Chat Application."""
 import os
+import re
 import uuid
 import logging
+import requests
 from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -30,6 +32,7 @@ DEFAULT_MODEL = "pixtral-12b-2409"
 
 GROWW_API_KEY = os.getenv("groww_api_key")
 GROWW_API_SECRET = os.getenv("groww_api_secret")
+JAVA_BACKEND_URL = os.getenv("JAVA_BACKEND_URL", "http://localhost:8080")
 
 groww_client = None
 GrowwAPI = None
@@ -302,6 +305,85 @@ def get_stock_ltp():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/stock/batch-ltp', methods=['POST'])
+def batch_ltp():
+    """Batch fetch LTP for multiple symbols across CASH and FNO segments.
+    
+    Request body:
+    {
+        "cash": ["SBIN", "MARUTI", ...],
+        "fno": ["SBIN26MAYFUT", "MARUTI26APRFUT", ...]
+    }
+    
+    Response:
+    {
+        "cash": {"SBIN": 650.5, "MARUTI": 12000.0, ...},
+        "fno": {"SBIN26MAYFUT": 655.0, ...},
+        "errors": {"BADSTOCK": "Not found"}
+    }
+    """
+    if not groww_client:
+        return jsonify({"error": "Groww API not configured"}), 503
+    
+    body = request.get_json(silent=True) or {}
+    cash_symbols = body.get("cash", [])
+    fno_symbols = body.get("fno", [])
+    
+    result = {"cash": {}, "fno": {}, "errors": {}}
+    
+    # Fetch CASH LTPs in batch
+    if cash_symbols:
+        try:
+            symbol_keys = [f"NSE_{s.strip().upper()}" for s in cash_symbols]
+            if len(symbol_keys) == 1:
+                ltp_data = groww_client.get_ltp(
+                    segment=groww_client.SEGMENT_CASH,
+                    exchange_trading_symbols=symbol_keys[0]
+                )
+            else:
+                ltp_data = groww_client.get_ltp(
+                    segment=groww_client.SEGMENT_CASH,
+                    exchange_trading_symbols=tuple(symbol_keys)
+                )
+            # Parse response: keys are like "NSE_SBIN", values have "last_price"
+            if isinstance(ltp_data, dict):
+                for key, val in ltp_data.items():
+                    symbol = key.replace("NSE_", "") if key.startswith("NSE_") else key
+                    if isinstance(val, dict) and val.get("last_price") is not None:
+                        result["cash"][symbol] = val["last_price"]
+                    elif isinstance(val, (int, float)):
+                        result["cash"][symbol] = val
+        except Exception as e:
+            logger.error(f"Error in batch CASH LTP: {e}")
+            result["errors"]["cash_batch"] = str(e)
+    
+    # Fetch FNO LTPs in batch
+    if fno_symbols:
+        try:
+            symbol_keys = [f"NSE_{s.strip().upper()}" for s in fno_symbols]
+            if len(symbol_keys) == 1:
+                ltp_data = groww_client.get_ltp(
+                    segment=groww_client.SEGMENT_FNO,
+                    exchange_trading_symbols=symbol_keys[0]
+                )
+            else:
+                ltp_data = groww_client.get_ltp(
+                    segment=groww_client.SEGMENT_FNO,
+                    exchange_trading_symbols=tuple(symbol_keys)
+                )
+            if isinstance(ltp_data, dict):
+                for key, val in ltp_data.items():
+                    symbol = key.replace("NSE_", "") if key.startswith("NSE_") else key
+                    if isinstance(val, dict) and val.get("last_price") is not None:
+                        result["fno"][symbol] = val["last_price"]
+                    elif isinstance(val, (int, float)):
+                        result["fno"][symbol] = val
+        except Exception as e:
+            logger.error(f"Error in batch FNO LTP: {e}")
+            result["errors"]["fno_batch"] = str(e)
+    
+    return jsonify(result)
+
 @app.route('/api/stock/search', methods=['GET'])
 def search_stock():
     """Search for stocks/derivatives by symbol - returns quote data."""
@@ -314,20 +396,22 @@ def search_stock():
         return jsonify({"error": "Query parameter 'q' is required"}), 400
     
     # Determine segment based on symbol format
-    # Derivatives typically have format like: NIFTY26MAR25FUT, BANKNIFTY26MAR25C50000, NIFTY24000CE
+    # Derivatives have specific patterns: ends with FUT, or digit+CE/PE (e.g., NIFTY24000CE)
+    # Use precise regex to avoid false positives (e.g., MARUTI contains "MAR" but is equity)
     segment = groww_client.SEGMENT_CASH
     
-    # Check for FNO patterns - derivatives usually have numbers followed by FUT/CE/PE
-    # or end with FUT, or contain date patterns like 26MAR25
-    is_derivative = (
-        'FUT' in query or 
-        query.endswith('CE') or 
-        query.endswith('PE') or
-        'CALL' in query or 
-        'PUT' in query or
-        # Check for date patterns like 26MAR25, 26MAR, JAN, FEB, etc
-        any(month in query for month in ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'])
+    # Precise FNO detection: symbol must end with FUT, or have digits followed by CE/PE
+    # Examples: SBIN26MAYFUT, NIFTY26MAR25FUT, NIFTY24000CE, BANKNIFTY25000PE
+    _FNO_PATTERN = re.compile(
+        r'(?:'
+        r'FUT$'                                     # Ends with FUT (futures)
+        r'|'
+        r'\d+(?:CE|PE)$'                            # Digits followed by CE/PE (options with strike)
+        r'|'
+        r'\d{2}(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\d{0,2}(?:CE|PE)$'  # Date-style options
+        r')'
     )
+    is_derivative = bool(_FNO_PATTERN.search(query))
     
     if is_derivative:
         segment = groww_client.SEGMENT_FNO
@@ -395,9 +479,10 @@ def test_stock():
     if not symbol:
         return jsonify({"error": "Symbol parameter is required"}), 400
     
-    # Determine segment
+    # Determine segment using precise pattern matching
     segment = groww_client.SEGMENT_CASH
-    if 'FUT' in symbol or symbol.endswith('CE') or symbol.endswith('PE'):
+    _FNO_TEST = re.compile(r'(?:FUT$|\d+(?:CE|PE)$|\d{2}(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\d{0,2}(?:CE|PE)$)')
+    if _FNO_TEST.search(symbol):
         segment = groww_client.SEGMENT_FNO
     
     try:

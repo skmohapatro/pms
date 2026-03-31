@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-commerce (Amazon-like) Architecture - Animated Flow</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0b1020 0%, #121a33 45%, #0d2740 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 28px;
+      color: #00d4ff;
+      letter-spacing: 0.2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 22px;
+      font-size: 14px;
+    }
+
+    .container {
+      position: relative;
+      width: 1200px;
+      height: 760px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.03);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.10);
+      overflow: hidden;
+    }
+
+    .component {
+      position: absolute;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 650;
+      text-align: center;
+      transition: all 0.25s ease;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+      user-select: none;
+    }
+    .component:hover {
+      transform: translateY(-1px) scale(1.03);
+      z-index: 100;
+    }
+    .component .label {
+      font-size: 10px;
+      opacity: 0.72;
+      margin-top: 4px;
+      font-weight: 450;
+    }
+
+    .client { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .edge { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .gateway { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #111827; }
+    .service { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #06111f; }
+    .messaging { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #06111f; }
+    .data { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #06111f; }
+    .external { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); color: #1b1b1b; }
+    .consumer { background: linear-gradient(135deg, #c3cfe2 0%, #c3cfe2 100%); color: #0b1020; }
+
+    svg.arrows {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .arrow-path {
+      fill: none;
+      stroke: rgba(255,255,255,0.28);
+      stroke-width: 2;
+    }
+
+    .packet {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #00d4ff;
+      box-shadow: 0 0 10px #00d4ff, 0 0 18px rgba(0,212,255,0.85);
+      opacity: 0;
+      z-index: 50;
+    }
+
+    .component.active { animation: pulse 1s infinite; }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+      50% { box-shadow: 0 8px 38px rgba(0,212,255,0.60); }
+    }
+
+    .legend {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      background: rgba(0,0,0,0.50);
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 11px;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+      color: rgba(255,255,255,0.85);
+    }
+    .legend-item:last-child { margin-bottom: 0; }
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+
+    .step-desc {
+      position: absolute;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.72);
+      padding: 12px 22px;
+      border-radius: 10px;
+      font-size: 14px;
+      text-align: center;
+      min-width: 520px;
+      border: 1px solid rgba(0,212,255,0.9);
+    }
+
+    .controls {
+      text-align: center;
+      margin-top: 18px;
+    }
+    .controls button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: #fff;
+      padding: 12px 26px;
+      font-size: 14px;
+      border-radius: 25px;
+      cursor: pointer;
+      margin: 0 10px;
+      transition: all 0.25s ease;
+    }
+    .controls button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45);
+    }
+
+    .step-indicator {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .step-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.26);
+      transition: all 0.25s ease;
+    }
+    .step-dot.active {
+      background: #00d4ff;
+      box-shadow: 0 0 10px #00d4ff;
+    }
+
+    .detail-popup {
+      position: absolute;
+      background: linear-gradient(135deg, rgba(14, 20, 36, 0.98) 0%, rgba(22, 45, 70, 0.98) 100%);
+      border: 2px solid rgba(0, 212, 255, 0.95);
+      border-radius: 12px;
+      padding: 16px 18px;
+      max-width: 360px;
+      z-index: 220;
+      opacity: 0;
+      transform: scale(0.86) translateY(-10px);
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: auto;
+      box-shadow: 0 10px 40px rgba(0, 212, 255, 0.18), 0 0 20px rgba(0, 212, 255, 0.12);
+    }
+    .detail-popup.show {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+    .detail-popup.hide {
+      opacity: 0;
+      transform: scale(0.92) translateY(10px);
+    }
+    .detail-popup h3 {
+      color: #00d4ff;
+      font-size: 15px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .detail-popup h3::before {
+      content: "●";
+      font-size: 10px;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+    .detail-popup ul { list-style: none; padding: 0; margin: 0; }
+    .detail-popup li {
+      font-size: 12px;
+      color: rgba(255,255,255,0.82);
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      padding-left: 12px;
+      position: relative;
+      line-height: 1.25rem;
+    }
+    .detail-popup li:last-child { border-bottom: none; }
+    .detail-popup li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: #00d4ff;
+      font-size: 10px;
+    }
+    .detail-popup .highlight { color: #43e97b; font-weight: 650; }
+    .detail-popup .tech { color: #f5576c; font-weight: 650; }
+
+    .hint {
+      position: absolute;
+      left: 18px;
+      top: 18px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.70);
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.10);
+      padding: 10px 12px;
+      border-radius: 10px;
+      max-width: 300px;
+    }
+    .hint b { color: rgba(255,255,255,0.92); }
+  </style>
+</head>
+<body>
+  <h1>E-commerce (Amazon-like) Architecture</h1>
+  <p class="subtitle">Animated Data Flow Visualization (Browse → Search → Cart → Checkout Saga → Eventing)</p>
+
+  <div class="container" id="diagram">
+    <div class="hint">
+      <b>Tip:</b> Start the animation, then hover the popup to pause progression.
+    </div>
+
+    <div class="component client" id="client" style="left: 34px; top: 92px; width: 130px;">
+      Client Apps
+      <div class="label">Web / Mobile</div>
+    </div>
+
+    <div class="component edge" id="cdn" style="left: 210px; top: 92px; width: 120px;">
+      CDN
+      <div class="label">Images + Edge Cache</div>
+    </div>
+
+    <div class="component gateway" id="gateway" style="left: 370px; top: 92px; width: 150px;">
+      API Gateway / BFF
+      <div class="label">Auth + Rate Limit</div>
+    </div>
+
+    <div class="component service" id="catalog" style="left: 590px; top: 40px; width: 140px;">
+      Catalog Service
+      <div class="label">Product Metadata</div>
+    </div>
+
+    <div class="component service" id="search" style="left: 590px; top: 120px; width: 140px;">
+      Search Service
+      <div class="label">Query + Filters</div>
+    </div>
+
+    <div class="component service" id="pricing" style="left: 590px; top: 200px; width: 140px;">
+      Pricing Service
+      <div class="label">Price Snapshot</div>
+    </div>
+
+    <div class="component service" id="inventory" style="left: 590px; top: 280px; width: 140px;">
+      Inventory Service
+      <div class="label">Reserve / Release</div>
+    </div>
+
+    <div class="component service" id="cart" style="left: 590px; top: 360px; width: 140px;">
+      Cart Service
+      <div class="label">Redis / TTL</div>
+    </div>
+
+    <div class="component service" id="checkout" style="left: 590px; top: 440px; width: 140px;">
+      Checkout Service
+      <div class="label">Saga Orchestrator</div>
+    </div>
+
+    <div class="component service" id="orders" style="left: 590px; top: 520px; width: 140px;">
+      Order Service
+      <div class="label">State Machine</div>
+    </div>
+
+    <div class="component service" id="payment" style="left: 770px; top: 440px; width: 140px;">
+      Payment Service
+      <div class="label">PSP Integration</div>
+    </div>
+
+    <div class="component external" id="psp" style="left: 950px; top: 440px; width: 200px;">
+      Payment Provider (PSP)
+      <div class="label">Redirect / Webhook</div>
+    </div>
+
+    <div class="component messaging" id="kafka" style="left: 820px; top: 250px; width: 150px;">
+      Event Bus
+      <div class="label">Kafka / Pulsar</div>
+    </div>
+
+    <div class="component consumer" id="indexer" style="left: 1030px; top: 120px; width: 140px;">
+      Search Indexer
+      <div class="label">Async Index Updates</div>
+    </div>
+
+    <div class="component consumer" id="notify" style="left: 1030px; top: 200px; width: 140px;">
+      Notifications
+      <div class="label">Email / SMS</div>
+    </div>
+
+    <div class="component consumer" id="fulfillment" style="left: 1030px; top: 280px; width: 140px;">
+      Fulfillment
+      <div class="label">Ship / Track</div>
+    </div>
+
+    <div class="component consumer" id="analytics" style="left: 1030px; top: 360px; width: 140px;">
+      Analytics / Recs
+      <div class="label">Event Consumers</div>
+    </div>
+
+    <div class="component data" id="productdb" style="left: 780px; top: 40px; width: 170px;">
+      Product Store
+      <div class="label">NoSQL / Hybrid</div>
+    </div>
+
+    <div class="component data" id="searchindex" style="left: 950px; top: 40px; width: 200px;">
+      Search Index
+      <div class="label">OpenSearch</div>
+    </div>
+
+    <div class="component data" id="redis" style="left: 780px; top: 360px; width: 170px;">
+      Cart Store
+      <div class="label">Redis Cluster</div>
+    </div>
+
+    <div class="component data" id="inventorydb" style="left: 780px; top: 280px; width: 170px;">
+      Inventory Store
+      <div class="label">NewSQL / RDBMS</div>
+    </div>
+
+    <div class="component data" id="ordersdb" style="left: 780px; top: 520px; width: 170px;">
+      Orders Store
+      <div class="label">Aurora/Spanner</div>
+    </div>
+
+    <svg class="arrows">
+      <path class="arrow-path" d="M 164 112 L 210 112" />
+      <path class="arrow-path" d="M 330 112 L 370 112" />
+
+      <path class="arrow-path" d="M 520 112 Q 555 112 590 80" />
+      <path class="arrow-path" d="M 520 112 L 590 140" />
+      <path class="arrow-path" d="M 520 112 L 590 220" />
+      <path class="arrow-path" d="M 520 112 L 590 380" />
+      <path class="arrow-path" d="M 520 112 L 590 460" />
+
+      <path class="arrow-path" d="M 730 60 L 780 60" />
+      <path class="arrow-path" d="M 730 140 Q 820 140 950 60" />
+      <path class="arrow-path" d="M 730 220 L 820 250" />
+
+      <path class="arrow-path" d="M 730 300 L 780 300" />
+      <path class="arrow-path" d="M 730 380 L 780 380" />
+      <path class="arrow-path" d="M 730 460 L 770 460" />
+      <path class="arrow-path" d="M 910 460 L 950 460" />
+
+      <path class="arrow-path" d="M 820 540 L 780 540" />
+
+      <path class="arrow-path" d="M 895 250 Q 980 250 1030 140" />
+      <path class="arrow-path" d="M 895 250 Q 980 250 1030 220" />
+      <path class="arrow-path" d="M 895 250 Q 980 250 1030 300" />
+      <path class="arrow-path" d="M 895 250 Q 980 250 1030 380" />
+
+      <path class="arrow-path" d="M 1170 140 L 1150 60" />
+
+      <path class="arrow-path" d="M 730 540 Q 775 540 820 310" />
+    </svg>
+
+    <div class="packet" id="packet1"></div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color client"></div> Client</div>
+      <div class="legend-item"><div class="legend-color edge"></div> Edge/CDN</div>
+      <div class="legend-item"><div class="legend-color gateway"></div> Gateway/BFF</div>
+      <div class="legend-item"><div class="legend-color service"></div> Services</div>
+      <div class="legend-item"><div class="legend-color data"></div> Data Stores</div>
+      <div class="legend-item"><div class="legend-color messaging"></div> Messaging</div>
+      <div class="legend-item"><div class="legend-color consumer"></div> Consumers</div>
+      <div class="legend-item"><div class="legend-color external"></div> External</div>
+    </div>
+
+    <div class="step-desc" id="stepDesc">Click "Start Animation" to see the end-to-end flow</div>
+
+    <div class="detail-popup" id="detailPopup">
+      <h3 id="popupTitle">Component Details</h3>
+      <ul id="popupContent"></ul>
+    </div>
+
+    <div class="step-indicator">
+      <div class="step-dot" id="dot1"></div>
+      <div class="step-dot" id="dot2"></div>
+      <div class="step-dot" id="dot3"></div>
+      <div class="step-dot" id="dot4"></div>
+      <div class="step-dot" id="dot5"></div>
+      <div class="step-dot" id="dot6"></div>
+      <div class="step-dot" id="dot7"></div>
+      <div class="step-dot" id="dot8"></div>
+      <div class="step-dot" id="dot9"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button onclick="startAnimation()">▶ Start Animation</button>
+    <button onclick="resetAnimation()">↺ Reset</button>
+  </div>
+
+  <script>
+    const steps = [
+      {
+        desc: "Step 1: User requests a product page (Client → CDN → API Gateway/BFF)",
+        active: ["client", "cdn", "gateway"],
+        packet: { from: {x: 70, y: 112}, to: {x: 420, y: 112} },
+        popupPos: { x: 40, y: 155 },
+        popupTitle: "Edge Entry — Client, CDN, Gateway",
+        popupDetails: [
+          "CDN serves <span class='highlight'>images/static assets</span> and can cache HTML fragments",
+          "Gateway/BFF handles <span class='tech'>auth, rate limiting</span>, and fan-out to backend services",
+          "Read path is optimized for <span class='highlight'>low latency</span> and high QPS"
+        ]
+      },
+      {
+        desc: "Step 2: Product details assembled (Catalog + Pricing + Inventory)",
+        active: ["catalog", "pricing", "inventory", "productdb", "inventorydb"],
+        packet: { from: {x: 520, y: 112}, to: {x: 650, y: 80} },
+        popupPos: { x: 520, y: 160 },
+        popupTitle: "Product Page Assembly",
+        popupDetails: [
+          "Catalog returns product metadata from <span class='tech'>Product Store</span>",
+          "Pricing returns a <span class='highlight'>price snapshot</span> (short TTL cacheable)",
+          "Inventory returns <span class='highlight'>availability indicator</span> (often eventual for browse)",
+          "Use caching: product minutes, price/inventory seconds"
+        ]
+      },
+      {
+        desc: "Step 3: Search query (Gateway → Search Service → Search Index)",
+        active: ["search", "searchindex"],
+        packet: { from: {x: 520, y: 112}, to: {x: 1000, y: 60} },
+        popupPos: { x: 560, y: 18 },
+        popupTitle: "Search",
+        popupDetails: [
+          "Search hits <span class='tech'>OpenSearch</span> for fast retrieval",
+          "Optionally enrich results with <span class='highlight'>price/availability</span>",
+          "Tradeoff: pre-index signals vs fetch-on-read"
+        ]
+      },
+      {
+        desc: "Step 4: Add to cart (Gateway → Cart Service → Redis)",
+        active: ["cart", "redis"],
+        packet: { from: {x: 520, y: 112}, to: {x: 820, y: 380} },
+        popupPos: { x: 560, y: 410 },
+        popupTitle: "Cart",
+        popupDetails: [
+          "Cart is write-heavy and needs <span class='highlight'>low latency</span>",
+          "Store cart state in <span class='tech'>Redis</span> with TTL for abandoned carts",
+          "Emit events for analytics (optional)"
+        ]
+      },
+      {
+        desc: "Step 5: Checkout submit starts a saga (validate cart + pricing snapshot + reserve inventory)",
+        active: ["checkout", "cart", "pricing", "inventory"],
+        packet: { from: {x: 520, y: 112}, to: {x: 650, y: 460} },
+        popupPos: { x: 520, y: 510 },
+        popupTitle: "Checkout — Saga Orchestration",
+        popupDetails: [
+          "Client sends <span class='tech'>Idempotency-Key</span> to prevent duplicate orders",
+          "Checkout reserves inventory via Inventory Service to prevent <span class='highlight'>oversell</span>",
+          "Pricing is snapped for consistent totals",
+          "Compensation: payment failure → <span class='highlight'>release reservation</span>"
+        ]
+      },
+      {
+        desc: "Step 6: Create payment intent + redirect (Payment Service → PSP)",
+        active: ["payment", "psp"],
+        packet: { from: {x: 770, y: 460}, to: {x: 1040, y: 460} },
+        popupPos: { x: 820, y: 500 },
+        popupTitle: "Payments (PSP Integration)",
+        popupDetails: [
+          "Use PSP to avoid storing card data (<span class='highlight'>tokenization</span>)",
+          "Payment intent creation must be <span class='tech'>idempotent</span>",
+          "PSP sends a signed <span class='tech'>webhook</span> for success/failure"
+        ]
+      },
+      {
+        desc: "Step 7: Webhook confirms payment (PSP → Payment Service → Event Bus)",
+        active: ["payment", "kafka"],
+        packet: { from: {x: 1040, y: 460}, to: {x: 870, y: 265} },
+        popupPos: { x: 780, y: 300 },
+        popupTitle: "Eventing",
+        popupDetails: [
+          "Publish events like <span class='tech'>payment.succeeded</span> and <span class='tech'>payment.failed</span>",
+          "Consumers must be <span class='highlight'>idempotent</span> (at-least-once delivery)",
+          "Use retries + DLQs for non-retriable failures"
+        ]
+      },
+      {
+        desc: "Step 8: Order confirmed (Order Service updates state and persists to Orders DB)",
+        active: ["orders", "ordersdb"],
+        packet: { from: {x: 870, y: 265}, to: {x: 820, y: 540} },
+        popupPos: { x: 560, y: 585 },
+        popupTitle: "Orders",
+        popupDetails: [
+          "Order Service transitions state: <span class='tech'>PAYMENT_PENDING → CONFIRMED</span>",
+          "Orders stored in relational/NewSQL for <span class='highlight'>transactional consistency</span>",
+          "All state transitions must be safe under retries"
+        ]
+      },
+      {
+        desc: "Step 9: Downstream consumers act (index updates, notifications, fulfillment, analytics)",
+        active: ["indexer", "notify", "fulfillment", "analytics", "searchindex"],
+        packet: { from: {x: 870, y: 265}, to: {x: 1100, y: 210} },
+        popupPos: { x: 820, y: 88 },
+        popupTitle: "Consumers",
+        popupDetails: [
+          "Search indexer applies <span class='highlight'>async updates</span> to OpenSearch",
+          "Notifications send email/SMS for user-visible state changes",
+          "Fulfillment allocates shipment and later emits shipping events",
+          "Analytics/Recs consume events for reporting and personalization"
+        ]
+      }
+    ];
+
+    let currentStep = -1;
+    let animationRunning = false;
+    let isMouseOverPopup = false;
+    let hideTimeout = null;
+
+    const popup = document.getElementById('detailPopup');
+    const popupTitle = document.getElementById('popupTitle');
+    const popupContent = document.getElementById('popupContent');
+
+    popup.addEventListener('mouseenter', () => {
+      isMouseOverPopup = true;
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+        hideTimeout = null;
+      }
+    });
+
+    popup.addEventListener('mouseleave', () => {
+      isMouseOverPopup = false;
+      if (animationRunning && currentStep >= 0) {
+        hideTimeout = setTimeout(() => {
+          if (!isMouseOverPopup) {
+            hidePopup().then(() => {
+              if (animationRunning) runStep(currentStep + 1);
+            });
+          }
+        }, 450);
+      }
+    });
+
+    function clearHighlights() {
+      document.querySelectorAll('.component').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.step-dot').forEach(d => d.classList.remove('active'));
+    }
+
+    function showPopup(step) {
+      popupTitle.textContent = step.popupTitle;
+      popupContent.innerHTML = step.popupDetails.map(d => `<li>${d}</li>`).join('');
+      popup.style.left = step.popupPos.x + 'px';
+      popup.style.top = step.popupPos.y + 'px';
+      popup.classList.remove('hide');
+      popup.classList.add('show');
+      isMouseOverPopup = false;
+    }
+
+    function hidePopup() {
+      return new Promise(resolve => {
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = null;
+        }
+        popup.classList.remove('show');
+        popup.classList.add('hide');
+        setTimeout(resolve, 800);
+      });
+    }
+
+    function animatePacket(from, to, duration = 780) {
+      return new Promise(resolve => {
+        const packet = document.getElementById('packet1');
+        packet.style.left = from.x + 'px';
+        packet.style.top = from.y + 'px';
+        packet.style.opacity = '1';
+        packet.style.transition = `all ${duration}ms ease-in-out`;
+
+        setTimeout(() => {
+          packet.style.left = to.x + 'px';
+          packet.style.top = to.y + 'px';
+        }, 50);
+
+        setTimeout(() => {
+          packet.style.opacity = '0';
+          resolve();
+        }, duration + 100);
+      });
+    }
+
+    async function runStep(stepIndex) {
+      if (stepIndex >= steps.length) {
+        await hidePopup();
+        document.getElementById('stepDesc').textContent = "✓ Complete! Read path uses caching; write path uses a checkout saga with event-driven consumers.";
+        animationRunning = false;
+        return;
+      }
+
+      currentStep = stepIndex;
+      const step = steps[stepIndex];
+
+      if (stepIndex > 0) await hidePopup();
+
+      clearHighlights();
+      step.active.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+      });
+
+      document.getElementById('dot' + (stepIndex + 1)).classList.add('active');
+      document.getElementById('stepDesc').textContent = step.desc;
+
+      await animatePacket(step.packet.from, step.packet.to);
+      showPopup(step);
+
+      await new Promise(resolve => {
+        const checkAndProceed = () => {
+          if (!isMouseOverPopup) resolve();
+          else setTimeout(checkAndProceed, 120);
+        };
+        setTimeout(checkAndProceed, 3400);
+      });
+
+      if (animationRunning) runStep(stepIndex + 1);
+    }
+
+    function startAnimation() {
+      if (animationRunning) return;
+      animationRunning = true;
+      currentStep = -1;
+      clearHighlights();
+      popup.classList.remove('show', 'hide');
+      runStep(0);
+    }
+
+    function resetAnimation() {
+      animationRunning = false;
+      currentStep = -1;
+      clearHighlights();
+      document.getElementById('packet1').style.opacity = '0';
+      popup.classList.remove('show');
+      popup.classList.add('hide');
+      document.getElementById('stepDesc').textContent = 'Click "Start Animation" to see the end-to-end flow';
+    }
+  </script>
+</body>
+</html>

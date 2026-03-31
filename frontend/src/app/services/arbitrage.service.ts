@@ -27,6 +27,12 @@ export interface ArbitrageRefreshResponse {
   minAnnualReturn: number;
   durationMs: number;
   timestamp: number;
+  totalCompanies: number;
+  successfulCompanies: number;
+  failedCompanies: number;
+  totalFuturesProcessed: number;
+  futuresSkippedNoMatch: number;
+  futuresSkippedApiError: number;
 }
 
 @Injectable({

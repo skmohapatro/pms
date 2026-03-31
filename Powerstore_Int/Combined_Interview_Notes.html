@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Combined Notes — CloudIQ / Interview Prep</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: rgba(255, 255, 255, 0.04);
+      --panel-2: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.10);
+      --text: rgba(255, 255, 255, 0.92);
+      --muted: rgba(255, 255, 255, 0.65);
+      --faint: rgba(255, 255, 255, 0.40);
+      --brand: #00d4ff;
+      --brand-2: #667eea;
+      --ok: #43e97b;
+      --warn: #f5576c;
+      --shadow: 0 18px 60px rgba(0,0,0,0.55);
+
+      --sidebar-w: 340px;
+      --topbar-h: 56px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      color: var(--text);
+      background: radial-gradient(1200px 700px at 20% 10%, rgba(102,126,234,0.18), transparent 60%),
+                  radial-gradient(900px 600px at 80% 20%, rgba(0,212,255,0.14), transparent 55%),
+                  linear-gradient(135deg, #070b14 0%, #0b1220 50%, #070b14 100%);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+    }
+
+    .sidebar {
+      position: relative;
+      height: 100%;
+      border-right: 1px solid var(--border);
+      background: rgba(0,0,0,0.22);
+      backdrop-filter: blur(10px);
+    }
+
+    .sidebar-header {
+      height: var(--topbar-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.2px;
+      color: #eaf6ff;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .pill {
+      font-size: 11px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      user-select: none;
+    }
+
+    .sidebar-tools {
+      padding: 14px 16px;
+      display: grid;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .search {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+    }
+
+    .search input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .search .hint {
+      font-size: 11px;
+      color: var(--faint);
+      white-space: nowrap;
+    }
+
+    .doc-links {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .doc-link {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      padding: 10px 10px;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,0.78);
+      user-select: none;
+    }
+
+    .doc-link:hover {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .toc {
+      position: absolute;
+      top: calc(var(--topbar-h) + 14px + 16px + 52px + 10px + 60px);
+      bottom: 0;
+      left: 0;
+      right: 0;
+      overflow: auto;
+      padding: 14px 10px 16px 10px;
+    }
+
+    .toc::-webkit-scrollbar,
+    .content::-webkit-scrollbar {
+      width: 10px;
+    }
+    .toc::-webkit-scrollbar-thumb,
+    .content::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.10);
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,0);
+      background-clip: padding-box;
+    }
+
+    .toc-group {
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .toc-group-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+
+    .toc-group-title .left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .toc-group-title .name {
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      color: #eaf6ff;
+    }
+
+    .toc-group-title .desc {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .toc-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 4px;
+    }
+
+    .toc-item a {
+      display: block;
+      padding: 7px 10px;
+      border-radius: 10px;
+      color: rgba(255,255,255,0.78);
+      border: 1px solid transparent;
+      transition: background 0.12s ease, border-color 0.12s ease;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .toc-item a:hover {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+      text-decoration: none;
+    }
+
+    .toc-item a.active {
+      background: rgba(0,212,255,0.10);
+      border-color: rgba(0,212,255,0.30);
+      color: #d7f7ff;
+    }
+
+    .toc-item.level-2 a { padding-left: 18px; }
+    .toc-item.level-3 a { padding-left: 28px; font-size: 12px; }
+
+    .main {
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .topbar {
+      height: var(--topbar-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.12);
+      backdrop-filter: blur(10px);
+    }
+
+    .topbar .title {
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.2px;
+      color: #eaf6ff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .topbar .title .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--brand);
+      box-shadow: 0 0 20px rgba(0,212,255,0.7);
+    }
+
+    .topbar .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      color: rgba(255,255,255,0.80);
+      padding: 8px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 12px;
+      user-select: none;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .content {
+      position: absolute;
+      top: var(--topbar-h);
+      bottom: 0;
+      left: 0;
+      right: 0;
+      overflow: auto;
+      padding: 26px 26px 60px 26px;
+    }
+
+    .paper {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .paper-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(102,126,234,0.12) 0%, rgba(0,212,255,0.08) 100%);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .paper-header .h {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .paper-header .h .big {
+      font-weight: 800;
+      font-size: 16px;
+      color: #eaf6ff;
+    }
+
+    .paper-header .h .small {
+      font-size: 12px;
+      color: rgba(255,255,255,0.70);
+    }
+
+    .paper-header .meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      font-size: 11px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.18);
+      color: rgba(255,255,255,0.75);
+      user-select: none;
+    }
+
+    /* Markdown content styling */
+    .md {
+      padding: 22px;
+      line-height: 1.65;
+      color: rgba(255,255,255,0.90);
+    }
+
+    .md h1, .md h2, .md h3 {
+      line-height: 1.25;
+      scroll-margin-top: 90px;
+    }
+
+    .md h1 {
+      font-size: 22px;
+      margin: 14px 0 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .md h2 {
+      font-size: 18px;
+      margin: 18px 0 8px;
+      color: #eaf6ff;
+    }
+
+    .md h3 {
+      font-size: 15px;
+      margin: 16px 0 6px;
+      color: rgba(255,255,255,0.86);
+    }
+
+    .md p { margin: 10px 0; }
+
+    .md blockquote {
+      margin: 14px 0;
+      padding: 12px 14px;
+      border-left: 3px solid rgba(0,212,255,0.55);
+      background: rgba(0, 212, 255, 0.06);
+      border-radius: 10px;
+      color: rgba(255,255,255,0.85);
+    }
+
+    .md code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.92em;
+      background: rgba(255,255,255,0.07);
+      padding: 0.18em 0.35em;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .md pre {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 14px;
+      padding: 14px;
+      overflow: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      margin: 14px 0;
+    }
+
+    .md pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+    }
+
+    .md table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .md th, .md td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      vertical-align: top;
+    }
+
+    .md th {
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.90);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      text-transform: none;
+    }
+
+    .md tr:hover td {
+      background: rgba(255,255,255,0.03);
+    }
+
+    .md ul, .md ol {
+      margin: 10px 0 10px 20px;
+      padding: 0;
+    }
+
+    .md hr {
+      border: none;
+      height: 1px;
+      background: rgba(255,255,255,0.10);
+      margin: 18px 0;
+    }
+
+    .md .anchor {
+      opacity: 0;
+      margin-left: 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.55);
+      transition: opacity 0.12s ease;
+    }
+
+    .md h1:hover .anchor,
+    .md h2:hover .anchor,
+    .md h3:hover .anchor {
+      opacity: 1;
+    }
+
+    .footer {
+      padding: 16px 22px 22px 22px;
+      border-top: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.18);
+      color: rgba(255,255,255,0.60);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Responsive */
+    @media (max-width: 1100px) {
+      :root { --sidebar-w: 310px; }
+    }
+
+    @media (max-width: 940px) {
+      body { overflow: auto; }
+      .app { grid-template-columns: 1fr; }
+      .sidebar { height: auto; position: sticky; top: 0; z-index: 1000; }
+      .toc { position: static; max-height: 340px; }
+      .main { height: auto; }
+      .content { position: static; padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-title">Combined Interview Notes</div>
+          <div class="brand-subtitle">Introduction + Design Doc + Prep Roadmap</div>
+        </div>
+        <div class="pill" id="tocCount">0 sections</div>
+      </div>
+
+      <div class="sidebar-tools">
+        <div class="search">
+          <input id="search" type="text" placeholder="Search headings + text…" autocomplete="off" />
+          <div class="hint">Ctrl+K</div>
+        </div>
+
+        <div class="doc-links">
+          <div class="doc-link" data-jump="doc-introduction">Intro</div>
+          <div class="doc-link" data-jump="doc-design">Design</div>
+          <div class="doc-link" data-jump="doc-prep">Prep</div>
+        </div>
+      </div>
+
+      <div class="toc" id="toc"></div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="title"><span class="dot"></span><span id="activeTitle">Ready</span></div>
+        <div class="actions">
+          <div class="btn" id="btnTop">Back to top</div>
+          <div class="btn" id="btnExpand">Expand all</div>
+        </div>
+      </div>
+
+      <div class="content" id="contentScroll">
+        <div class="paper">
+          <div class="paper-header">
+            <div class="h">
+              <div class="big">CloudIQ / AIOps — Combined Reading View</div>
+              <div class="small">Single-page HTML with navigation, search, and section anchors.</div>
+            </div>
+            <div class="meta">
+              <div class="chip">Generated locally</div>
+              <div class="chip">Markdown rendered in browser</div>
+              <div class="chip">Highlight.js</div>
+            </div>
+          </div>
+
+          <div class="md" id="renderRoot"></div>
+
+          <div class="footer">
+            <div>Tip: Use the left TOC to jump quickly. Search is instant and filters sections.</div>
+            <div>Keys: Ctrl+K focus search, Esc clear</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Raw Markdown Sources (embedded) -->
+  <script type="text/plain" id="md-introduction"># Introduction
+
+Hi, I’m Sudhir Mohapatro. In my current role at Dell, I work on CloudIQ / Dell AIOps, which monitors large-scale storage deployments. I design and build backend services for high-volume telemetry ingestion (objects, metrics, events, alerts). We use RabbitMQ to decouple producers and consumers and to manage backpressure, a processing layer to enrich and aggregate telemetry, and a polyglot storage approach: Cassandra for write-heavy time-series data and PostgreSQL for relational, tenant, and metadata needs.
+
+On top of that, I’m responsible for production readiness: SLO-driven monitoring, failure-mode thinking (DLQs, retries, idempotency), and secure multi-tenant isolation. A recent example was our PCF → Kubernetes migration, where we tuned probes/resources and scaling to keep ingestion stable and prevent telemetry gaps. I’m now looking for a role where I can take broader ownership of architecture and delivery, especially around distributed systems performance, reliability, and mentoring.
+
+## Explanation of the architecture choices (details)
+
+### RabbitMQ: decouple producers/consumers + enforce backpressure
+
+- **Decoupling**: producers (storage arrays / product gateways) and consumers (processors) do not call each other directly. Producers publish messages to queues/exchanges, and consumers pull from queues. This means:
+  - Producers can keep sending even if consumers are temporarily slow.
+  - Consumers can be scaled independently (increase replicas to catch up).
+  - A consumer deploy/restart does not require coordinating with producers.
+
+- **Backpressure**: the system prevents a slow downstream (processor / DB) from collapsing the entire pipeline.
+  - **Queue buffering** absorbs bursts (temporary spikes in telemetry volume).
+  - **Consumer prefetch / concurrency limits** keep each consumer from taking more work than it can process safely.
+  - **Acknowledgements (ack)** ensure messages are removed only after successful processing; if a consumer dies mid-work, the message can be re-delivered (at-least-once).
+
+### Processing layer: enrich + aggregate telemetry
+
+- **Enrichment**: add context needed for analytics and UI, for example:
+  - Map raw IDs to asset hierarchy (cluster → node → volume).
+  - Attach tenant/customer context.
+  - Normalize units and timestamps.
+
+- **Aggregation**: compute rollups to make querying faster and cheaper:
+  - Convert raw per-second/per-minute metrics into 5m/1h/day aggregates.
+  - Pre-compute KPIs (latency p95/p99, capacity used %, error rates).
+
+- **Why it matters**: raw telemetry is high volume and often not directly query-friendly. Enrichment makes it meaningful; aggregation makes reads fast for dashboards and reports.
+
+### Polyglot storage: Cassandra + PostgreSQL
+
+- **Cassandra (time-series, write-heavy)**
+  - Best for very high ingest rates and large volumes of append-style telemetry.
+  - Data modeling is optimized for known query patterns (usually “asset + time range”).
+  - Works well with retention via TTL and wide-column/time-bucket designs.
+
+- **PostgreSQL (relational + tenant/config/metadata)**
+  - Best for relational data (tenant config, user preferences, asset metadata, schemas) that needs joins/constraints/transactions.
+  - Strong consistency (ACID) where correctness matters more than raw write throughput.
+
+- **Why not one database for everything?**
+  - Using Cassandra for relational queries is painful and inefficient.
+  - Using Postgres for extremely high-frequency time-series ingest can become expensive and harder to scale.
+  - Splitting lets each datastore do what it’s best at, and the processing/API layer hides the complexity from consumers.
+
+---
+
+# Likely Follow-up Questions (with clear answers)
+
+## 1) Role clarity / scope
+
+### Q: What exactly do you own in this system?
+**Answer**: I own backend services in the ingestion and processing path—designing and implementing consumers/processors, improving reliability and backpressure behavior, and ensuring data correctness across retries. I also contribute to production readiness: SLOs, monitoring/alerting, incident response, and multi-tenant safeguards.
+
+### Q: What’s the hardest problem you solved recently?
+**Answer**: Stabilizing our PCF → Kubernetes migration for ingestion services. The hard part wasn’t just deployment—it was ensuring consumer stability under load, controlling retries/backpressure, and preventing telemetry gaps while maintaining tenant isolation and correctness.
+
+## 2) Architecture walkthrough
+
+### Q: Can you walk me through the end-to-end flow?
+**Answer**: Telemetry lands in the ingestion entry point, gets validated/normalized, and is sent through RabbitMQ to decouple producers and consumers. Processing services enrich and aggregate telemetry, generate KPIs/events/alerts, and store data in a polyglot model: Cassandra for high-volume time-series writes and Postgres for relational tenant/config/metadata. APIs then expose this data to dashboards, alerting, and analytics consumers with tenant context and access controls.
+
+### Q: Why RabbitMQ? Why not Kafka?
+**Answer**: RabbitMQ fits our current needs for flexible routing and decoupling with acknowledgements and operational simplicity. Kafka is great when long retention and replay are primary requirements. If we needed native replay/event sourcing across many consumers, Kafka becomes more attractive; for our current routing/backpressure/ops balance, RabbitMQ is the pragmatic choice.
+
+### Q: What data goes to Cassandra vs Postgres?
+**Answer**: Cassandra stores high-volume telemetry/time-series data where write throughput and scale are key, and queries are typically time-range + key-based. Postgres stores relational data—tenant config, metadata, relationships, and anything needing ACID transactions, constraints, or complex joins.
+
+## 3) Scale & performance
+
+### Q: How do you scale ingestion when volume spikes?
+**Answer**: We let RabbitMQ absorb short bursts, then scale consumers horizontally and keep processing stateless. We cap concurrency with bounded thread pools/prefetch limits so we don’t overload downstream stores. We monitor lag/queue depth and scale based on SLO signals, not just CPU.
+
+### Q: How do you avoid hot partitions in Cassandra?
+**Answer**: We pick partition keys that spread writes—typically tenant + asset + time bucket. For hot assets, we add extra bucketing/salting to distribute load, and we avoid query patterns that require scanning many partitions.
+
+## 4) Reliability / correctness
+
+### Q: What delivery guarantees do you provide?
+**Answer**: Primarily at-least-once delivery from the queue/consumer model. That means downstream writes must be idempotent or deduplicated. We also use DLQs for poison messages and track retry/redelivery counts to avoid infinite loops.
+
+### Q: How do you handle retries safely?
+**Answer**: Retries are bounded and jittered, and we retry only on transient failures. Permanent failures go to DLQ with alerting. We ensure processing is idempotent via deterministic keys/upserts/dedup windows so retries don’t double-apply effects.
+
+## 5) Multi-tenancy
+
+### Q: How do you ensure tenant isolation?
+**Answer**: Tenant context is enforced at the API gateway and propagated through services. In storage, Cassandra data models include tenant identifiers in partitioning and Postgres can enforce row-level constraints/policies. We add audit logs with tenant context and test for cross-tenant access patterns.
+
+## 6) PCF → Kubernetes migration
+
+### Q: What changed during PCF → Kubernetes that caused issues?
+**Answer**: The biggest differences were around service lifecycle and resource behavior—probe configuration, startup time, CPU throttling due to requests/limits, and how restarts affect consumer state and message acknowledgements.
+
+### Q: What did you tune in Kubernetes?
+**Answer**: Readiness/liveness probes (initial delay, thresholds), resource requests/limits, autoscaling signals, and consumer settings like prefetch/concurrency so pods remain stable and don’t amplify load during backlog drain.
+
+## 7) Observability / debugging
+
+### Q: What metrics do you monitor?
+**Answer**: Queue depth and age (lag), consumer acks/re-deliveries, processing throughput, error rates, Cassandra/Postgres latency, API p95/p99 latency, and pod health (restarts, throttling).
+
+### Q: How do you debug a production issue quickly?
+**Answer**: I start with where the queue is building and which dependency is slow. Then I correlate logs/metrics/traces using correlation IDs. If needed, I use thread dumps/JFR for JVM services. Stabilize first (limit concurrency, scale, reroute to DLQ), then do root cause.
+
+## 8) Leadership signals
+
+### Q: How do you make design tradeoffs?
+**Answer**: I anchor on requirements (latency, throughput, availability, correctness), then evaluate options with operational cost and failure modes. I document the decision and define success metrics and rollback triggers.
+
+### Q: What are you looking for in your next role?
+**Answer**: More end-to-end ownership across architecture and delivery—leading design decisions, improving reliability/performance, and mentoring—while building high-scale backend systems.
+</script>
+
+  <script type="text/plain" id="md-design"># Dell AIOPS / CloudIQ — Design Document (Interview Ready)
+
+## 1. Executive Summary
+
+**CloudIQ** is Dell's AI-powered infrastructure monitoring and analytics platform. It ingests telemetry data (metrics, events, alerts, object changes) from Dell storage products (PowerStore, PowerScale, etc.), processes and enriches the data, stores it in a polyglot persistence layer, and exposes APIs for downstream consumers (dashboards, ML models, alerting systems).
+
+**Key qualities**: high-throughput ingestion, multi-tenant isolation, schema-driven data evolution, near-real-time analytics.
+
+---
+
+## 2. Architecture Overview (Component Breakdown)
+
+```
+┌─────────────┐     ┌─────────────────────────┐     ┌───────────────────┐     ┌─────────────┐
+│  Landing    │────▶│ CloudIQ Product Data    │────▶│    RabbitMQ       │────▶│  Generic    │
+│  Zone       │     │ Processor               │     │ (Base telemetry)  │     │  Data       │
+└─────────────┘     └─────────────────────────┘     └───────────────────┘     │  Processor  │
+                             │                              │                └──────┬──────┘
+                             ▼                              │                       │
+                   ┌─────────────────┐                      │                       ▼
+                   │  Schema Manager │                      │              ┌─────────────────┐
+                   │  + Telemetry    │                      │              │  GDS (Cassandra)│
+                   │  Metadata       │                      │              └─────────────────┘
+                   └─────────────────┘                      │                       │
+                                                            │                       ▼
+                                                            │              ┌─────────────────┐
+                                                            └─────────────▶│ CloudIQ Post    │
+                                                                           │ Processing      │
+                                                                           │ Consumer        │
+                                                                           └────────┬────────┘
+                                                                                    │
+                   ┌────────────────────────────────────────────────────────────────┘
+                   │
+                   ▼
+   ┌───────────────────────────────────────────────────────────────────────────────────┐
+   │                              Storage & API Layer                                   │
+   │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌──────────────────┐   │
+   │  │ Data API    │    │ Tenant      │    │ Data-API    │    │ Data API Access  │   │
+   │  │ Base        │    │ Domain      │    │ (PostgreSQL)│    │ (Gateway)        │   │
+   │  └─────────────┘    └─────────────┘    └─────────────┘    └──────────────────┘   │
+   └───────────────────────────────────────────────────────────────────────────────────┘
+                                             │
+                                             ▼
+                                   ┌───────────────────┐
+                                   │ CloudIQ Data      │
+                                   │ Consumers         │
+                                   │ (Dashboards, ML,  │
+                                   │  Alerts, Reports) │
+                                   └───────────────────┘
+```
+
+### 2.1 Ingestion Layer
+
+| Component | Responsibility |
+|-----------|----------------|
+| **Landing Zone** | Entry point for raw telemetry from Dell products. Acts as a buffer/staging area before processing. |
+| **CloudIQ Product Data Processor** | Validates, normalizes, and routes incoming product data. Publishes schema definitions to Schema Manager. |
+| **Schema Manager + Telemetry Metadata** | Central registry for telemetry schemas. Ensures producers/consumers agree on data contracts. Enables schema evolution without breaking downstream. |
+
+**Data flow**: `Landing Zone → Product Data Processor → RabbitMQ`
+
+### 2.2 Messaging Layer (RabbitMQ)
+
+| What flows through RMQ | Description |
+|------------------------|-------------|
+| **Base asset telemetry** | Objects, metrics, events, alerts from storage arrays |
+| **Any product data** | Flexible payload for new product integrations |
+
+**Why RabbitMQ?**
+- Supports multiple exchange types (direct, topic, fanout) for flexible routing
+- Durable queues for reliability
+- Consumer acknowledgments for at-least-once delivery
+- Scales horizontally with clustering
+
+### 2.3 Processing Layer
+
+| Component | Responsibility |
+|-----------|----------------|
+| **Generic Data Processor** | Stateless transformer that enriches/aggregates raw telemetry. Writes to GDS (Cassandra). Emits Object Change Events. |
+| **CloudIQ Post Processing Consumer** | Consumes post-processed KPIs, events, alerts. Applies business rules, anomaly detection, tenant-specific logic. Writes to Data API Base and Tenant Domain. |
+
+**Processing patterns**:
+- **Enrichment**: join with metadata (asset hierarchy, customer info)
+- **Aggregation**: roll-up metrics (hourly, daily)
+- **Alerting**: threshold checks, anomaly flags
+
+### 2.4 Storage Layer (Polyglot Persistence)
+
+| Store | Technology | Use Case |
+|-------|------------|----------|
+| **GDS** | Apache Cassandra | High-volume time-series metrics, events. Optimized for write-heavy, append-only workloads. Partitioned by asset + time. |
+| **Data-API (PostgreSQL)** | PostgreSQL | Relational data: tenant config, asset metadata, user preferences. Supports complex queries, joins, transactions. |
+| **Tenant Domain** | Logical isolation | Per-tenant data boundaries for multi-tenancy compliance (SOC2, GDPR). |
+
+**Why this split?**
+- Cassandra handles **scale** (millions of metrics/sec) with eventual consistency
+- PostgreSQL handles **correctness** (ACID transactions, relational integrity)
+
+### 2.5 API Layer
+
+| Component | Responsibility |
+|-----------|----------------|
+| **Generic Data API** | Exposes Cassandra data (metrics, events) via REST/gRPC. Supports time-range queries, downsampling. |
+| **Data API Access** | Unified gateway for CloudIQ Data Consumers. Handles auth, rate limiting, tenant context injection. |
+| **Modeling Metadata** | Provides schema/model definitions to API consumers (self-describing APIs). |
+| **Data API Base** | Exposes PostgreSQL data (config, metadata) via REST. |
+
+### 2.6 Consumers
+
+**CloudIQ Data Consumers** include:
+- **Dashboards**: real-time and historical views
+- **Alerting systems**: push notifications, integrations (ServiceNow, email)
+- **ML pipelines**: anomaly detection, capacity forecasting
+- **Reporting**: compliance, SLA reports
+
+---
+
+## 3. Key Design Decisions & Tradeoffs
+
+### 3.1 RabbitMQ vs Kafka
+
+| Aspect | RabbitMQ (chosen) | Kafka (alternative) |
+|--------|-------------------|---------------------|
+| **Delivery** | At-least-once with acks | At-least-once with offsets |
+| **Ordering** | Per-queue FIFO | Per-partition ordering |
+| **Replay** | Limited (requires DLQ) | Native replay from offset |
+| **Ops complexity** | Moderate | Higher (ZooKeeper/KRaft) |
+
+**Decision**: RabbitMQ chosen for simpler ops, flexible routing, and sufficient throughput for current scale. Kafka would be considered if replay/event sourcing becomes critical.
+
+### 3.2 Cassandra vs TimescaleDB
+
+| Aspect | Cassandra (chosen) | TimescaleDB |
+|--------|--------------------| ------------|
+| **Write throughput** | Excellent (LSM tree) | Good |
+| **Query flexibility** | Limited (partition key required) | Full SQL |
+| **Ops at scale** | Proven at PB scale | Growing adoption |
+
+**Decision**: Cassandra chosen for write-heavy telemetry workload and proven scale. Query flexibility handled by pre-aggregating and caching hot paths.
+
+### 3.3 Schema Evolution Strategy
+
+- **Schema Manager** acts as a registry (similar to Confluent Schema Registry)
+- **Backward compatible changes** (add optional fields) don't require consumer updates
+- **Breaking changes** versioned; consumers migrate on their schedule
+- **Telemetry Metadata** provides runtime schema lookups for dynamic deserialization
+
+---
+
+## 4. Non-Functional Requirements
+
+| Requirement | Target | How achieved |
+|-------------|--------|--------------|
+| **Throughput** | 500K+ events/sec | Horizontal scaling of processors, Cassandra partitioning |
+| **Latency (ingestion → queryable)** | < 30 sec p99 | Streaming processors, no batch windows |
+| **Availability** | 99.9% | Multi-AZ deployment, RMQ mirroring, Cassandra RF=3 |
+| **Multi-tenancy** | Strict isolation | Tenant Domain boundaries, row-level security in PG |
+| **Data retention** | 90 days hot, 2 years cold | TTL in Cassandra, tiered storage |
+
+---
+
+## 5. Failure Modes & Mitigations
+
+| Failure | Impact | Mitigation |
+|---------|--------|------------|
+| **RabbitMQ broker down** | Ingestion blocked | Clustered RMQ, quorum queues, producer retries with backoff |
+| **Cassandra node failure** | Read/write degraded | RF=3, consistency level LOCAL_QUORUM, anti-entropy repair |
+| **Processor crash** | Events pile up in queue | Stateless processors, auto-restart, consumer acks only after write |
+| **Schema mismatch** | Deserialization errors | Schema validation at ingestion, DLQ for poison messages |
+| **Tenant data leak** | Compliance violation | Tenant context in every request, audit logging, integration tests |
+
+---
+
+## 6. Observability Stack
+
+- **Metrics**: Prometheus + Grafana (queue depth, processing lag, error rates)
+- **Logs**: ELK or Splunk (structured JSON, correlation IDs)
+- **Traces**: Jaeger/Zipkin (end-to-end latency, dependency mapping)
+- **Alerts**: PagerDuty integration (SLO-based alerting)
+
+**Key SLIs**:
+- Ingestion lag (queue age)
+- Processing error rate
+- API latency p99
+- Cassandra read/write latency
+
+---
+
+## 7. Interview Talking Points (How to Present This)
+
+### Opening (30 sec)
+> "I work on Dell CloudIQ, an AIOps platform that monitors Dell storage infrastructure. We ingest millions of telemetry events per second, process them in near-real-time, and expose APIs for dashboards, alerting, and ML-based anomaly detection."
+
+### Architecture walkthrough (2 min)
+> "The architecture has five layers: ingestion, messaging, processing, storage, and API.
+> - **Ingestion**: Landing Zone receives raw telemetry; Product Data Processor validates and routes it.
+> - **Messaging**: RabbitMQ decouples producers from consumers, handles backpressure. (Backpressure is like a traffic light for data - when consumers can't keep up, RabbitMQ signals producers to slow down, preventing system overload. It does this by monitoring queue lengths and using flow control mechanisms. Flow control works by RabbitMQ sending a "go-slow" signal to TCP connections when memory thresholds are exceeded, temporarily blocking network I/O until resources free up. Decoupling means producers don't need to know about consumers - they just send messages to RabbitMQ and move on, while consumers pull messages when ready. This allows independent scaling, failure isolation, and flexible consumer patterns.)
+> - **Processing**: Generic Data Processor writes to Cassandra; Post Processing Consumer applies business rules and writes to PostgreSQL.
+> - **Storage**: Cassandra for high-volume metrics (write-optimized), PostgreSQL for relational data (query-optimized).
+> - **API**: Unified gateway with auth, rate limiting, tenant isolation."
+
+### Tradeoff question (1 min)
+> "We chose RabbitMQ over Kafka because our routing requirements are complex (topic-based fanout per product type), and we didn't need Kafka's replay semantics. If we later need event sourcing for audit, we'd reconsider."
+
+### Scale question (1 min)
+> "We handle 500K+ events/sec by horizontally scaling stateless processors and partitioning Cassandra by asset ID + time bucket. Hot partitions are avoided by salting partition keys for high-cardinality assets."
+
+---
+
+## 8. Deep-Dive Topics (Expect Follow-ups)
+
+### 8.1 How does schema evolution work?
+
+```
+Producer (v2 schema)                    Consumer (v1 schema)
+       │                                       │
+       ▼                                       │
+┌───────────────┐                               │
+│ Schema Manager│◀──────────────────────────────┘
+│ (registry)    │       (fetch schema on startup)
+└───────┬───────┘
+       │
+       ▼
+ Compatibility check:
+ - v2 adds optional field? ✓ backward compatible
+ - v2 removes required field? ✗ breaking change
+```
+
+**Key points**:
+- Producers register schemas before publishing
+- Consumers fetch schemas at startup + cache
+- Breaking changes require versioned topics/queues
+
+### 8.2 How do you handle backpressure?
+
+1. **At RabbitMQ**: queue length limits, publisher confirms, flow control
+2. **At processors**: bounded thread pools, reject excess with circuit breaker
+3. **At API**: rate limiting per tenant, 429 responses, retry-after headers
+
+### 8.3 How do you ensure tenant isolation?
+
+- **Network**: tenant context injected at API gateway, propagated via headers
+- **Storage**: PostgreSQL row-level security (RLS) policies, Cassandra partition includes tenant ID
+- **Audit**: all data access logged with tenant context for compliance
+
+---
+
+# Behavioral Questions & Answers (STAR Format)
+
+## Q1: Tell me about a time you owned a critical production incident.
+
+**Situation**: During our **PCF → Kubernetes** migration for the CloudIQ ingestion pipeline (RabbitMQ consumers + processors), we saw intermittent **telemetry gaps** right after cutover. RabbitMQ queue depth kept growing and some dashboards showed missing metrics for a subset of tenants.
+
+**Task**: As the on-call/driver for the migration weekend, I had to restore stable ingestion quickly, ensure **no tenant data leakage**, and bring us back under our ingestion-lag SLO (minutes-level) without a risky rollback.
+
+**Action**:
+1. **Triaged symptoms**: checked RabbitMQ management UI (queue depth/consumer acks), API lag dashboards, and Kubernetes signals (pod restarts, readiness, CPU/memory throttling).
+2. **Isolated the failure mode**: consumers were restarting frequently due to an overly aggressive **liveness probe** combined with **slow startup/warmup** in Kubernetes. On restart, the consumer would reconnect, re-fetch metadata, and fall behind; in some cases it also caused bursts of re-deliveries because work wasn’t fully acked yet.
+3. **Stabilized the cluster**:
+   - Tuned probes (increased initial delay, used readiness to gate traffic until warm)
+   - Right-sized CPU/memory requests/limits to avoid throttling
+   - Reduced concurrency and added bounded prefetch to prevent memory spikes during catch-up
+4. **Protected correctness**: verified idempotency/dedup behavior for at-least-once delivery (ensured writes were safe on retries) and confirmed tenant context propagation was intact.
+5. **Drained backlog safely**: scaled consumer replicas horizontally after the system stabilized and monitored ingestion lag until queues returned to normal.
+6. **Prevented recurrence**: added alerts on restart rate + readiness failures, and documented a cutover runbook (probe settings, resource baselines, and rollback triggers).
+
+**Result**: Ingestion stabilized within ~30 minutes of intervention; we drained the backlog over the next hour with **no data loss** and no cross-tenant impact. The probe/resource baseline changes eliminated the restart loop and made subsequent services migrations to Kubernetes smoother.
+
+---
+
+## Q2: Describe a tough technical tradeoff you made.
+
+**Situation**: We needed to add a "recent alerts" feature with sub-second query latency, but Cassandra queries were slow without the partition key.
+
+**Task**: Design a solution that met latency SLA without re-architecting the entire storage layer.
+
+**Action**:
+1. Evaluated options: (a) secondary index in Cassandra, (b) materialized view, (c) separate Redis cache, (d) PostgreSQL for recent data.
+2. Chose Redis cache with 24-hour TTL because:
+   - Sub-millisecond reads
+   - Write-through from processor (minimal code change)
+   - Acceptable staleness (alerts are append-only)
+3. Rejected Cassandra secondary index due to scatter-gather anti-pattern at scale.
+
+**Result**: Achieved p99 < 50ms for recent alerts. Cache hit rate 98%. Added 1 new component but avoided costly Cassandra schema migration.
+
+---
+
+## Q3: How did you mentor a teammate or improve team practices?
+
+**Situation**: A junior engineer was struggling with debugging production issues — often escalating to seniors without investigation.
+
+**Task**: Help them become self-sufficient and reduce escalation noise.
+
+**Action**:
+1. Pair-debugged 3 incidents with them, narrating my thought process ("first I check queue depth, then consumer logs, then downstream health").
+2. Created a runbook template: symptoms → data to gather → escalation criteria.
+3. Introduced "blameless postmortems" where we documented lessons learned without finger-pointing.
+4. Encouraged them to present one incident analysis per sprint to the team.
+
+**Result**: Their escalation rate dropped 60% in 2 months. They became the go-to person for RabbitMQ issues. The runbook became a team standard adopted by 3 other squads.
+
+---
+
+## Q4: Tell me about a disagreement on a design decision.
+
+**Situation**: I proposed using Cassandra for a new feature (asset inventory), but a senior architect wanted PostgreSQL for query flexibility.
+
+**Task**: Reach alignment without delaying the project.
+
+**Action**:
+1. Wrote a 1-page RFC comparing both options on: write volume, query patterns, consistency needs, ops burden.
+2. Organized a 30-min meeting with data points, not opinions.
+3. Acknowledged their concern (complex queries are painful in Cassandra) and proposed a hybrid: Cassandra for raw events, PostgreSQL for materialized aggregates.
+4. Agreed on success metrics: if PG replication lag > 5 sec, we'd revisit.
+
+**Result**: Hybrid approach shipped on time. Both stakeholders felt heard. The RFC became a template for future design discussions.
+
+---
+
+## Q5: Describe a time you delivered under pressure.
+
+**Situation**: A major customer (Fortune 100) needed a custom reporting feature in 3 weeks; normal timeline was 6 weeks.
+
+**Task**: Deliver a working solution without compromising quality or burning out the team.
+
+**Action**:
+1. Negotiated scope: "must-have" (3 reports) vs "nice-to-have" (5 reports). Customer agreed to 3.
+2. Parallelized work: I handled backend API while a teammate built the UI.
+3. Reused existing query patterns instead of building new ones (80% code reuse).
+4. Daily 15-min syncs to unblock fast.
+5. Cut integration testing scope but added contract tests for critical paths.
+
+**Result**: Delivered in 2.5 weeks. Customer signed a multi-year renewal. No production bugs in the first 60 days.
+
+---
+
+## Q6: How do you handle ambiguous requirements?
+
+**Situation**: Product asked for "anomaly detection on storage metrics" with no specifics on accuracy, latency, or scope.
+
+**Task**: Translate vague ask into a shippable MVP.
+
+**Action**:
+1. Asked clarifying questions: "What does success look like? Which metrics matter most? What's the tolerance for false positives?"
+2. Proposed a phased approach: Phase 1 = static thresholds (ship in 2 weeks), Phase 2 = ML-based (8 weeks).
+3. Built a prototype with 3 metrics, shared with PM for feedback.
+4. Iterated based on customer interviews PM arranged.
+
+**Result**: Phase 1 shipped and caught 2 real customer issues in the first month. Phase 2 scope was refined based on Phase 1 learnings, reducing wasted effort.
+
+---
+
+## Quick Reference: Behavioral Themes to Highlight
+
+| Theme | Your angle |
+|-------|------------|
+| **Ownership** | On-call incident resolution, end-to-end feature delivery |
+| **Technical depth** | Cassandra tuning, RabbitMQ backpressure, schema evolution |
+| **Tradeoffs** | Redis vs Cassandra, RMQ vs Kafka, hybrid storage |
+| **Mentoring** | Runbooks, pair debugging, blameless postmortems |
+| **Communication** | RFCs, design docs, stakeholder alignment |
+| **Delivery** | Scope negotiation, parallelization, MVP thinking |
+
+---
+
+## Cheat Sheet: Numbers to Remember
+
+| Metric | Value |
+|--------|-------|
+| Events/sec throughput | 500K+ |
+| Ingestion-to-queryable latency | < 30 sec p99 |
+| Availability target | 99.9% |
+| Cassandra replication factor | 3 |
+| Data retention (hot) | 90 days |
+| Data retention (cold) | 2 years |
+| Recent alerts cache TTL | 24 hours |
+| Recent alerts p99 latency | < 50 ms |
+ </script>
+
+  <script type="text/plain" id="md-prep">
+
+## Highest-yield areas (from JD)
+
+From the JD, the **highest-yield areas** are:
+
+### 1) Java (11/17/21) deep dive + concurrency + performance + modern language features
+
+- **Core language + JVM**
+  - **Memory model**: heap vs stack, object layout basics, references, GC roots.
+  - **GC**: G1 (Java 11 default in many distros), ZGC/Shenandoah (awareness), tuning signals (pause time vs throughput), common flags you’d mention and why.
+  - **JIT**: warmup, inlining, escape analysis, how it affects benchmarking.
+  - **Classloading/modularity**: JPMS basics, shading/relocation pitfalls, reflection impact.
+
+- **Modern Java features (use-case oriented)**
+  - **Java 11**: `var` (10), `Optional` best practices, `String`/`Collection` improvements, `HttpClient`.
+  - **Java 17**: records, sealed classes, pattern matching (instanceof), text blocks.
+  - **Java 21**: virtual threads (Loom) concepts, structured concurrency (high-level), scope values awareness.
+  - **How to talk about it**: “When I’d choose records vs Lombok”, “sealed hierarchies for domain constraints”, “virtual threads vs reactive for IO”.
+
+- **Concurrency (what interviewers typically probe)**
+  - **Primitives**: `synchronized`, `volatile`, `final` safe publication.
+  - **JUC**: `ExecutorService`, `CompletableFuture`, `ForkJoinPool`, `Semaphore`, `CountDownLatch`, `CyclicBarrier`, `Phaser`.
+  - **Locks**: `ReentrantLock`, `ReadWriteLock`, `StampedLock` tradeoffs.
+  - **Non-blocking**: atomics (`Atomic*`, `LongAdder`), CAS, ABA problem awareness.
+  - **Common bugs**: deadlocks (ordering), starvation, false sharing, memory visibility issues.
+
+- **Performance + profiling**
+  - **Latency vs throughput** framing; tail latencies (p95/p99) and backpressure.
+  - **Profiling toolkit**: JFR, async-profiler, heap dumps, thread dumps; when to use each.
+  - **Microbenchmarking**: JMH, avoiding dead-code elimination, warmup, proper measurement.
+  - **Common optimizations**: reduce allocations, pooling cautiously, batching, avoiding lock contention, efficient data structures.
+
+- **Practice prompts**
+  - **Explain**: “Why `volatile` doesn’t make compound operations atomic.”
+  - **Design**: “Implement a bounded thread-safe queue; discuss fairness + shutdown.”
+  - **Debug**: “Service has high CPU; outline a production-safe investigation plan.”
+
+### 2) Microservices + system design (high-scale, high-performance server-side)
+
+- **Architecture fundamentals**
+  - **Service boundaries**: DDD-ish approach, cohesion, ownership, data boundaries.
+  - **Sync vs async**: REST/gRPC vs messaging; impact on coupling and availability.
+  - **Resilience**: timeouts, retries (with jitter), circuit breakers, bulkheads, rate limiting.
+  - **Consistency**: strong vs eventual; when to accept staleness.
+
+- **Data + communication patterns**
+  - **Transactions**: saga orchestration vs choreography; compensating actions.
+  - **Idempotency**: idempotency keys, deduplication windows.
+  - **Outbox/inbox** patterns; exactly-once vs at-least-once realities.
+  - **Caching**: cache-aside, write-through, invalidation strategies.
+
+- **Scale + performance**
+  - **Load shaping**: admission control, backpressure, queue-based smoothing.
+  - **Horizontal scaling**: stateless services, sticky sessions pitfalls.
+  - **Hot partitions**: consistent hashing, sharding keys.
+  - **Observability**: logs/metrics/traces, SLOs, error budgets, RED/USE methods.
+
+- **System design interview checklist**
+  - **Requirements**: functional + non-functional (latency, throughput, availability, durability).
+  - **API**: endpoints/events, error model, pagination/ordering semantics.
+  - **Data model**: entities, indexes, retention/TTL.
+  - **Failure modes**: dependency failure, partial outage, replay, duplicates.
+  - **Rollout**: migrations, backwards compatibility, feature flags.
+
+- **Practice prompts**
+  - **Design**: “High-throughput ingestion + query service (p99 < X ms).”
+  - **Design**: “Rate-limited public API with per-tenant quotas + analytics.”
+  - **Tradeoff**: “Kafka vs RabbitMQ vs SQS—what changes in guarantees and ops?”
+
+### 3) Vert.x + RxJava (reactive/event-loop model, backpressure, async patterns)
+
+- **Vert.x model**
+  - **Event loop**: why blocking kills throughput; how to offload to worker pool.
+  - **Verticles**: deployment model, scaling instances, shared data cautions.
+  - **Async primitives**: callbacks, `Future/Promise`, composition patterns.
+  - **Context**: context propagation concerns (logging MDC, tracing).
+
+- **RxJava concepts that matter**
+  - **Observable vs Flowable**: backpressure semantics; when to use which.
+  - **Backpressure strategies**: buffer, drop, latest; how to pick based on SLA.
+  - **Schedulers**: IO vs computation; avoiding scheduler thrash.
+  - **Operators**: `flatMap` vs `concatMap` vs `switchMap` tradeoffs; error handling (`onErrorResumeNext`).
+
+- **Reactive pitfalls + talking points**
+  - **Threading**: “reactive is not automatically parallel.”
+  - **Debuggability**: stack traces, assembly tracking, structured logging.
+  - **Latency**: operator overhead vs benefits; when imperative + virtual threads may win.
+
+- **Practice prompts**
+  - **Explain**: “What is backpressure and how do you enforce it end-to-end?”
+  - **Design**: “Pipeline that consumes events, enriches via DB/HTTP, writes results; handle spikes.”
+  - **Debug**: “Event loop blocked warnings—how do you find the culprit?”
+
+### 4) Docker + Linux basics (containers, debugging prod issues)
+
+- **Docker fundamentals**
+  - **Images/layers**: why layer ordering matters; multi-stage builds.
+  - **Runtime**: environment variables, volumes, networking, health checks.
+  - **Resource controls**: CPU/memory limits, OOM behavior, why JVM flags matter in containers.
+
+- **Linux for production debugging**
+  - **Processes**: `ps`, `top`/`htop`, `kill`, signals.
+  - **Networking**: `ss`, `netstat` (legacy), `curl`, DNS basics.
+  - **Disk/memory**: `df`, `du`, `free`, cgroups basics.
+  - **Logs**: journald basics (if applicable), log rotation awareness.
+
+- **Runbook-style practice prompts**
+  - **Scenario**: “p99 latency spiked—what do you check first (app vs system vs dependency)?”
+  - **Scenario**: “Container restarts due to OOM—what evidence do you gather and what fixes exist?”
+
+### 5) PostgreSQL (schema/indexing, query tuning, transactions)
+
+- **Schema + indexing**
+  - **Index types**: B-tree (default), hash (rare), GIN/GiST for special cases (awareness).
+  - **Composite indexes**: left-prefix rule, index selectivity, covering indexes.
+  - **Constraints**: uniqueness, foreign keys; impact on write throughput.
+
+- **Query tuning**
+  - **EXPLAIN / EXPLAIN ANALYZE** interpretation basics.
+  - **Common slow patterns**: missing indexes, N+1 queries, unbounded sorts, `LIKE '%x%'`.
+  - **Pagination**: offset vs keyset; consistent ordering.
+  - **Autovacuum**: bloat and why vacuuming matters (high-level).
+
+- **Transactions + isolation**
+  - **ACID** recap with real examples.
+  - **Isolation levels**: read committed vs repeatable read vs serializable; typical anomalies.
+  - **Locks**: row-level vs table-level; deadlocks and avoidance.
+
+- **Practice prompts**
+  - **Explain**: “Why an index might not be used even if it exists.”
+  - **Debug**: “Query got slower after data growth—how do you approach it?”
+
+### 6) Principal-level behaviors (ownership, design tradeoffs, mentoring, delivery)
+
+- **Ownership + delivery**
+  - **Clarify outcomes**: define success metrics (latency, cost, reliability), align stakeholders.
+  - **Drive execution**: milestones, risk register, dependency management, pragmatic sequencing.
+  - **Operate what you build**: on-call readiness, dashboards, alerts, incident reviews.
+
+- **Technical leadership**
+  - **Tradeoffs**: explicitly compare 2-3 options with constraints (time, risk, complexity, ops).
+  - **Architecture reviews**: ask the “hard questions” (failure modes, rollout, data migration).
+  - **Quality bar**: testing strategy, non-functional requirements, security basics.
+
+- **Mentoring + influence**
+  - **Coaching**: unblock others, elevate code quality, design thinking.
+  - **Communication**: crisp design docs, decision records, escalation with options.
+  - **Disagreement**: resolve via data, prototypes, and clearly stated constraints.
+
+- **Story bank to prepare (STAR format)**
+  - **Scaling**: a system you scaled and what changed at p95/p99.
+  - **Incident**: a major outage and what you changed afterward.
+  - **Refactor**: paying down tech debt with measurable outcomes.
+  - **Mentoring**: growing a teammate or improving team practices.
+
+
+
+
+# 1‑Day Interview Roadmap (Principal Software Engineer – Java/Microservices/Docker/PostgreSQL/Vert.x/Linux)
+
+From the JD, the **highest-yield areas** are:
+- **Java (11/17/21) deep dive** + concurrency + performance + modern language features
+- **Microservices + system design** (high-scale, high-performance server-side)
+- **Vert.x + RxJava** (reactive/event-loop model, backpressure, async patterns)
+- **Docker + Linux basics** (containers, debugging prod issues)
+- **PostgreSQL** (schema/indexing, query tuning, transactions)
+- **Principal-level behaviors** (ownership, design tradeoffs, mentoring, delivery)
+
+Below is a tight plan you can complete in **one day**.
+
+---
+
+## Schedule (10–12 hours, adjust to your day)
+
+### Block 1 (1.5h): Understand role + prep “your story”
+- **Deliverable**: 60–90 sec intro + 2–3 strongest projects aligned to JD.
+- Focus points:
+  - Systems you built: scale, latency, throughput, availability
+  - Your role: architecture decisions, migrations, incident ownership
+  - Outcomes: measurable metrics (p99 latency, cost, uptime, TPS)
+
+**Practice**
+- Say out loud: “Problem → constraints → approach → tradeoffs → results”.
+
+---
+
+### Block 2 (2h): Java 11/17/21 core + concurrency/perf (must)
+- **Java 11**:
+  - `var` (Java 10), local var type inference usage guidelines
+  - HTTP Client (Java 11) basics
+  - GC awareness (G1 defaults; what you monitor: pause, allocation rate)
+- **Java 17/21** (focus on interview-friendly features):
+  - **Records**, **sealed classes**, **switch expressions**, **text blocks**
+  - Virtual threads (Java 21) conceptually: when it helps vs reactive
+- **Concurrency**:
+  - `CompletableFuture` patterns; thread pools; deadlocks; lock contention
+  - `volatile`, happens-before, immutability, safe publication
+- **Performance**:
+  - Object allocation pressure, avoiding blocking on event loops
+  - Profiling mindset: CPU vs IO waits, GC pauses, thread dumps
+
+**Quick drills**
+- Explain difference: `synchronized` vs `ReentrantLock`
+- When to use `ConcurrentHashMap.computeIfAbsent`
+- How to debug a CPU spike in prod Java service
+
+---
+
+### Block 3 (1.5h): Vert.x + RxJava + Reactive fundamentals (must)
+- **Vert.x model**:
+  - Event loop threads, worker threads, **don’t block event loop**
+  - Verticles, routing, async handlers, futures/promises
+- **RxJava**:
+  - Observable vs Flowable (backpressure)
+  - `map/flatMap`, `subscribeOn/observeOn`, error handling, retries
+- **Common interview traps**:
+  - Mixing blocking DB calls on event loop
+  - Unbounded concurrency (fan-out) without limits/timeouts
+
+**Practice**
+- “How would you implement a non-blocking API that calls 3 downstream services with timeout + partial failure handling?”
+
+---
+
+### Block 4 (2h): Microservices + System Design (principal focus)
+Pick **1 system design** and do it end-to-end (whiteboard style).
+
+**Suggested design prompt (aligned to storage/enterprise systems)**
+- “Design an API for managing storage volumes/snapshots with high availability”
+Or generic:
+- “Design a high-throughput service for device telemetry ingestion + querying”
+
+**Checklist to cover**
+- Requirements: functional + NFRs (latency, availability, consistency, scale)
+- API + data model
+- Service decomposition (or why not)
+- **Resilience**: timeouts, retries, circuit breakers, bulkheads
+- **Consistency**: idempotency keys, exactly-once vs at-least-once
+- **Observability**: logs, metrics, traces, SLOs
+- Rollout & ops: canary, blue/green, feature flags
+
+**Principal-level signals**
+- State explicit tradeoffs (CAP, cost vs performance)
+- Call out failure modes + mitigation
+
+---
+
+### Block 5 (1.25h): PostgreSQL essentials (must)
+- **Indexes**:
+  - B-tree basics, composite index order, selectivity
+  - When indexes hurt (writes, bloat)
+- **Query tuning**:
+  - `EXPLAIN (ANALYZE, BUFFERS)` interpretation at high level
+  - Avoid N+1, avoid sequential scans on hot paths
+- **Transactions**:
+  - Isolation levels (know at least Read Committed vs Serializable)
+  - Deadlocks and how to resolve (ordering, retries)
+- **Schema design**:
+  - Normalization vs denormalization; constraints
+
+**Practice questions**
+- “Why is my query slow though I added an index?”
+- “How to design idempotent writes in a microservice?”
+
+---
+
+### Block 6 (1.25h): Docker + Linux troubleshooting (must)
+- **Docker**:
+  - Image vs container, layers, multi-stage builds (concept)
+  - Env config, ports, volumes
+  - Resource limits (CPU/mem), why container OOM happens
+- **Linux basics for interviews**:
+  - `top/htop`, `free -m`, `df -h`, `netstat/ss`, `lsof`
+  - Reading logs, process signals, basic networking (DNS, ports)
+
+**Scenario drills**
+- “Service is up but endpoints time out—what do you check first?”
+- “Container keeps restarting—how do you debug?”
+
+---
+
+### Block 7 (45 min): Behavioral / Leadership (Principal)
+Prepare 5 stories using STAR:
+- **Ownership**: major incident you led to resolution
+- **Architecture**: a tough tradeoff you made (and why)
+- **Mentoring**: improving team practices, code quality, onboarding
+- **Conflict**: disagreement on design; how you aligned stakeholders
+- **Delivery**: driving execution in Agile, managing risk/scope
+
+**Key phrases**
+- “I clarified success metrics…”
+- “We reduced risk by…”
+- “I drove alignment by writing an RFC…”
+
+---
+
+## Last 90 Minutes Before Interview (high impact)
+- **30 min**: Your intro + 2 project deep dives (out loud)
+- **30 min**: One system design run-through (requirements → architecture → tradeoffs)
+- **20 min**: Java concurrency + reactive gotchas flash review
+- **10 min**: Rest, water, open notes, calm start
+
+---
+
+## Quick Question (to tailor this)
+Answer these and I’ll adjust the roadmap to your exact strengths:
+- **Which is your strongest stack today**: Spring Boot or Vert.x/reactive?
+- **How many years in Java + microservices?**
+- **Do you expect system design round or mostly coding/Java deep dive?**
+
+---
+
+# Status
+- Completed a **1-day, hour-by-hour roadmap** aligned to the JD, plus a **principal-level interview checklist** and **last-minute refresh routine**.
+
+---
+
+# Dell AIOPS / CloudIQ — Design Document (Interview Ready)
+
+## 1. Executive Summary
+
+**CloudIQ** is Dell's AI-powered infrastructure monitoring and analytics platform. It ingests telemetry data (metrics, events, alerts, object changes) from Dell storage products (PowerStore, PowerScale, etc.), processes and enriches the data, stores it in a polyglot persistence layer, and exposes APIs for downstream consumers (dashboards, ML models, alerting systems).
+
+**Key qualities**: high-throughput ingestion, multi-tenant isolation, schema-driven data evolution, near-real-time analytics.
+
+---
+
+## 2. Architecture Overview (Component Breakdown)
+
+### 2.1 Ingestion Layer
+
+| Component | Responsibility |
+|-----------|----------------|
+| **Landing Zone** | Entry point for raw telemetry from Dell products. Acts as a buffer/staging area before processing. |
+| **CloudIQ Product Data Processor** | Validates, normalizes, and routes incoming product data. Publishes schema definitions to Schema Manager. |
+| **Schema Manager + Telemetry Metadata** | Central registry for telemetry schemas. Ensures producers/consumers agree on data contracts. Enables schema evolution without breaking downstream. |
+
+**Data flow**: `Landing Zone → Product Data Processor → RabbitMQ`
+
+### 2.2 Messaging Layer (RabbitMQ)
+
+| What flows through RMQ | Description |
+|------------------------|-------------|
+| **Base asset telemetry** | Objects, metrics, events, alerts from storage arrays |
+| **Any product data** | Flexible payload for new product integrations |
+
+**Why RabbitMQ?**
+- Supports multiple exchange types (direct, topic, fanout) for flexible routing
+- Durable queues for reliability
+- Consumer acknowledgments for at-least-once delivery
+- Scales horizontally with clustering
+
+### 2.3 Processing Layer
+
+| Component | Responsibility |
+|-----------|----------------|
+| **Generic Data Processor** | Stateless transformer that enriches/aggregates raw telemetry. Writes to GDS (Cassandra). Emits Object Change Events. |
+| **CloudIQ Post Processing Consumer** | Consumes post-processed KPIs, events, alerts. Applies business rules, anomaly detection, tenant-specific logic. Writes to Data API Base and Tenant Domain. |
+
+**Processing patterns**:
+- **Enrichment**: join with metadata (asset hierarchy, customer info)
+- **Aggregation**: roll-up metrics (hourly, daily)
+- **Alerting**: threshold checks, anomaly flags
+
+### 2.4 Storage Layer (Polyglot Persistence)
+
+| Store | Technology | Use Case |
+|-------|------------|----------|
+| **GDS** | Apache Cassandra | High-volume time-series metrics, events. Optimized for write-heavy, append-only workloads. Partitioned by asset + time. |
+| **Data-API (PostgreSQL)** | PostgreSQL | Relational data: tenant config, asset metadata, user preferences. Supports complex queries, joins, transactions. |
+| **Tenant Domain** | Logical isolation | Per-tenant data boundaries for multi-tenancy compliance (SOC2, GDPR). |
+
+**Why this split?**
+- Cassandra handles **scale** (millions of metrics/sec) with eventual consistency
+- PostgreSQL handles **correctness** (ACID transactions, relational integrity)
+
+### 2.5 API Layer
+
+| Component | Responsibility |
+|-----------|----------------|
+| **Generic Data API** | Exposes Cassandra data (metrics, events) via REST/gRPC. Supports time-range queries, downsampling. |
+| **Data API Access** | Unified gateway for CloudIQ Data Consumers. Handles auth, rate limiting, tenant context injection. |
+| **Modeling Metadata** | Provides schema/model definitions to API consumers (self-describing APIs). |
+| **Data API Base** | Exposes PostgreSQL data (config, metadata) via REST. |
+
+### 2.6 Consumers
+
+**CloudIQ Data Consumers** include:
+- **Dashboards**: real-time and historical views
+- **Alerting systems**: push notifications, integrations (ServiceNow, email)
+- **ML pipelines**: anomaly detection, capacity forecasting
+- **Reporting**: compliance, SLA reports
+
+---
+
+## 3. Key Design Decisions & Tradeoffs
+
+### 3.1 RabbitMQ vs Kafka
+
+| Aspect | RabbitMQ (chosen) | Kafka (alternative) |
+|--------|-------------------|---------------------|
+| **Delivery** | At-least-once with acks | At-least-once with offsets |
+| **Ordering** | Per-queue FIFO | Per-partition ordering |
+| **Replay** | Limited (requires DLQ) | Native replay from offset |
+| **Ops complexity** | Moderate | Higher (ZooKeeper/KRaft) |
+
+**Decision**: RabbitMQ chosen for simpler ops, flexible routing, and sufficient throughput for current scale. Kafka would be considered if replay/event sourcing becomes critical.
+
+### 3.2 Cassandra vs TimescaleDB
+
+| Aspect | Cassandra (chosen) | TimescaleDB |
+|--------|--------------------| ------------|
+| **Write throughput** | Excellent (LSM tree) | Good |
+| **Query flexibility** | Limited (partition key required) | Full SQL |
+| **Ops at scale** | Proven at PB scale | Growing adoption |
+
+**Decision**: Cassandra chosen for write-heavy telemetry workload and proven scale. Query flexibility handled by pre-aggregating and caching hot paths.
+
+### 3.3 Schema Evolution Strategy
+
+- **Schema Manager** acts as a registry (similar to Confluent Schema Registry)
+- **Backward compatible changes** (add optional fields) don't require consumer updates
+- **Breaking changes** versioned; consumers migrate on their schedule
+- **Telemetry Metadata** provides runtime schema lookups for dynamic deserialization
+
+---
+
+## 4. Non-Functional Requirements
+
+| Requirement | Target | How achieved |
+|-------------|--------|--------------|
+| **Throughput** | 500K+ events/sec | Horizontal scaling of processors, Cassandra partitioning |
+| **Latency (ingestion → queryable)** | < 30 sec p99 | Streaming processors, no batch windows |
+| **Availability** | 99.9% | Multi-AZ deployment, RMQ mirroring, Cassandra RF=3 |
+| **Multi-tenancy** | Strict isolation | Tenant Domain boundaries, row-level security in PG |
+| **Data retention** | 90 days hot, 2 years cold | TTL in Cassandra, tiered storage |
+
+---
+
+## 5. Failure Modes & Mitigations
+
+| Failure | Impact | Mitigation |
+|---------|--------|------------|
+| **RabbitMQ broker down** | Ingestion blocked | Clustered RMQ, quorum queues, producer retries with backoff |
+| **Cassandra node failure** | Read/write degraded | RF=3, consistency level LOCAL_QUORUM, anti-entropy repair |
+| **Processor crash** | Events pile up in queue | Stateless processors, auto-restart, consumer acks only after write |
+| **Schema mismatch** | Deserialization errors | Schema validation at ingestion, DLQ for poison messages |
+| **Tenant data leak** | Compliance violation | Tenant context in every request, audit logging, integration tests |
+
+---
+
+## 6. Observability Stack
+
+- **Metrics**: Prometheus + Grafana (queue depth, processing lag, error rates)
+- **Logs**: ELK or Splunk (structured JSON, correlation IDs)
+- **Traces**: Jaeger/Zipkin (end-to-end latency, dependency mapping)
+- **Alerts**: PagerDuty integration (SLO-based alerting)
+
+**Key SLIs**:
+- Ingestion lag (queue age)
+- Processing error rate
+- API latency p99
+- Cassandra read/write latency
+
+---
+
+## 7. Interview Talking Points (How to Present This)
+
+### Opening (30 sec)
+> "I work on Dell CloudIQ, an AIOps platform that monitors Dell storage infrastructure. We ingest millions of telemetry events per second, process them in near-real-time, and expose APIs for dashboards, alerting, and ML-based anomaly detection."
+
+### Architecture walkthrough (2 min)
+> "The architecture has five layers: ingestion, messaging, processing, storage, and API.
+> - **Ingestion**: Landing Zone receives raw telemetry; Product Data Processor validates and routes it.
+> - **Messaging**: RabbitMQ decouples producers from consumers, handles backpressure.
+> - **Processing**: Generic Data Processor writes to Cassandra; Post Processing Consumer applies business rules and writes to PostgreSQL.
+> - **Storage**: Cassandra for high-volume metrics (write-optimized), PostgreSQL for relational data (query-optimized).
+> - **API**: Unified gateway with auth, rate limiting, tenant isolation."
+
+### Tradeoff question (1 min)
+> "We chose RabbitMQ over Kafka because our routing requirements are complex (topic-based fanout per product type), and we didn't need Kafka's replay semantics. If we later need event sourcing for audit, we'd reconsider."
+
+### Scale question (1 min)
+> "We handle 500K+ events/sec by horizontally scaling stateless processors and partitioning Cassandra by asset ID + time bucket. Hot partitions are avoided by salting partition keys for high-cardinality assets."
+
+---
+
+## 8. Deep-Dive Topics (Expect Follow-ups)
+
+### 8.1 How does schema evolution work?
+
+```
+Producer (v2 schema)                    Consumer (v1 schema)
+       │                                       │
+       ▼                                       │
+┌───────────────┐                               │
+│ Schema Manager│◀──────────────────────────────┘
+│ (registry)    │       (fetch schema on startup)
+└───────┬───────┘
+       │
+       ▼
+ Compatibility check:
+ - v2 adds optional field? ✓ backward compatible
+ - v2 removes required field? ✗ breaking change
+```
+
+**Key points**:
+- Producers register schemas before publishing
+- Consumers fetch schemas at startup + cache
+- Breaking changes require versioned topics/queues
+
+### 8.2 How do you handle backpressure?
+
+1. **At RabbitMQ**: queue length limits, publisher confirms, flow control
+2. **At processors**: bounded thread pools, reject excess with circuit breaker
+3. **At API**: rate limiting per tenant, 429 responses, retry-after headers
+
+### 8.3 How do you ensure tenant isolation?
+
+- **Network**: tenant context injected at API gateway, propagated via headers
+- **Storage**: PostgreSQL row-level security (RLS) policies, Cassandra partition includes tenant ID
+- **Audit**: all data access logged with tenant context for compliance
+ </script>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <script>
+    const mdIntro = document.getElementById('md-introduction').textContent.trim();
+    const mdDesign = document.getElementById('md-design').textContent.trim();
+    const mdPrep = document.getElementById('md-prep').textContent.trim();
+
+    const renderRoot = document.getElementById('renderRoot');
+    const tocRoot = document.getElementById('toc');
+    const tocCount = document.getElementById('tocCount');
+    const contentScroll = document.getElementById('contentScroll');
+    const activeTitle = document.getElementById('activeTitle');
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+    }
+
+    function slugify(s) {
+      return s
+        .toLowerCase()
+        .trim()
+        .replace(/[`~!@#$%^&*()=+\[\]{}|;:'",.<>/?\\]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    }
+
+    function sectionTemplate(id, title, subtitle, md) {
+      const safeTitle = escapeHtml(title);
+      const safeSub = escapeHtml(subtitle);
+      const html = marked.parse(md, {
+        gfm: true,
+        breaks: false,
+        headerIds: false,
+        mangle: false
+      });
+
+      return `\n<section class="doc" id="${id}">\n` +
+        `<h1>${safeTitle}</h1>\n` +
+        `<p style="margin-top:6px;color:rgba(255,255,255,0.65);font-size:12px">${safeSub}</p>\n` +
+        `<hr />\n` +
+        html +
+        `\n</section>\n`;
+    }
+
+    function renderAll() {
+      renderRoot.innerHTML =
+        sectionTemplate('doc-introduction', 'Introduction.md', 'Personal intro + architecture explanations + ready-to-say answers', mdIntro) +
+        sectionTemplate('doc-design', 'DellAIOPS_DesignDoc.md', 'Architecture + tradeoffs + reliability + deep dives', mdDesign) +
+        sectionTemplate('doc-prep', 'IntPrep.md', 'Interview roadmap + high-yield topics + practice prompts', mdPrep);
+
+      renderRoot.querySelectorAll('pre code').forEach(el => {
+        hljs.highlightElement(el);
+      });
+
+      postProcessHeadings();
+      buildTOC();
+    }
+
+    function postProcessHeadings() {
+      const headings = renderRoot.querySelectorAll('h1, h2, h3');
+      const seen = new Map();
+
+      headings.forEach(h => {
+        const level = Number(h.tagName.substring(1));
+        const raw = h.textContent.trim();
+
+        let base = slugify(raw);
+        if (!base) base = 'section';
+
+        const n = (seen.get(base) || 0) + 1;
+        seen.set(base, n);
+        const id = n === 1 ? base : `${base}-${n}`;
+        h.id = id;
+
+        const a = document.createElement('a');
+        a.className = 'anchor';
+        a.href = `#${id}`;
+        a.textContent = '#';
+        h.appendChild(a);
+
+        h.dataset.level = String(level);
+        h.dataset.title = raw;
+      });
+    }
+
+    function buildTOC() {
+      const docs = [
+        { id: 'doc-introduction', name: 'Introduction', desc: 'Intro + answers' },
+        { id: 'doc-design', name: 'Design Doc', desc: 'System architecture' },
+        { id: 'doc-prep', name: 'Interview Prep', desc: 'Roadmap + drills' }
+      ];
+
+      const allItems = [];
+      tocRoot.innerHTML = '';
+
+      docs.forEach(d => {
+        const section = document.getElementById(d.id);
+        const hs = section.querySelectorAll('h1, h2, h3');
+
+        const group = document.createElement('div');
+        group.className = 'toc-group';
+
+        const header = document.createElement('div');
+        header.className = 'toc-group-title';
+        header.innerHTML = `
+          <div class="left">
+            <div class="name">${escapeHtml(d.name)}</div>
+            <div class="desc">${escapeHtml(d.desc)}</div>
+          </div>
+          <div class="pill" style="padding:6px 10px">${hs.length}</div>
+        `;
+        group.appendChild(header);
+
+        const ul = document.createElement('ul');
+        ul.className = 'toc-list';
+
+        hs.forEach(h => {
+          const lvl = Number(h.dataset.level || '2');
+          const title = h.dataset.title || h.textContent.trim();
+          const id = h.id;
+
+          const li = document.createElement('li');
+          li.className = `toc-item level-${Math.min(lvl,3)}`;
+
+          const a = document.createElement('a');
+          a.href = `#${id}`;
+          a.textContent = title;
+          a.dataset.target = id;
+          a.dataset.doc = d.id;
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            jumpTo(id);
+          });
+
+          li.appendChild(a);
+          ul.appendChild(li);
+
+          allItems.push({ a, title: title.toLowerCase(), docId: d.id, targetId: id });
+        });
+
+        group.appendChild(ul);
+        tocRoot.appendChild(group);
+      });
+
+      tocCount.textContent = `${allItems.length} sections`;
+
+      // scroll spy
+      setupScrollSpy(allItems);
+
+      // search filtering
+      setupSearch(allItems);
+
+      // quick doc jump buttons
+      document.querySelectorAll('.doc-link').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-jump');
+          jumpTo(id);
+        });
+      });
+
+      document.getElementById('btnTop').addEventListener('click', () => jumpTo('doc-introduction'));
+      document.getElementById('btnExpand').addEventListener('click', () => expandAllTOCGroups());
+    }
+
+    function expandAllTOCGroups() {
+      // Currently all groups are expanded; this is a future hook.
+      // Keep behavior simple: just focus TOC.
+      document.getElementById('search').focus();
+    }
+
+    function jumpTo(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      const top = el.getBoundingClientRect().top + contentScroll.scrollTop;
+      contentScroll.scrollTo({ top: Math.max(0, top - 18), behavior: 'smooth' });
+
+      // update URL hash without jumping
+      history.replaceState(null, '', `#${id}`);
+    }
+
+    function setupScrollSpy(items) {
+      const headings = items
+        .map(i => document.getElementById(i.targetId))
+        .filter(Boolean);
+
+      const byId = new Map(items.map(i => [i.targetId, i.a]));
+
+      const io = new IntersectionObserver((entries) => {
+        let best = null;
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
+          }
+        }
+
+        if (best && best.target && best.target.id) {
+          const id = best.target.id;
+          setActiveTOC(id, byId);
+        }
+      }, {
+        root: contentScroll,
+        rootMargin: '-10% 0px -75% 0px',
+        threshold: [0.05, 0.1, 0.2, 0.4, 0.6, 0.8]
+      });
+
+      headings.forEach(h => io.observe(h));
+
+      // Initial hash jump
+      const hash = location.hash ? location.hash.substring(1) : '';
+      if (hash && document.getElementById(hash)) {
+        setTimeout(() => jumpTo(hash), 0);
+      }
+    }
+
+    function setActiveTOC(id, byId) {
+      tocRoot.querySelectorAll('a.active').forEach(a => a.classList.remove('active'));
+      const a = byId.get(id);
+      if (a) {
+        a.classList.add('active');
+        activeTitle.textContent = a.textContent.trim();
+      }
+    }
+
+    function setupSearch(items) {
+      const input = document.getElementById('search');
+
+      function apply(q) {
+        const query = q.trim().toLowerCase();
+
+        // filter TOC items
+        items.forEach(i => {
+          const show = !query || i.title.includes(query);
+          i.a.parentElement.style.display = show ? '' : 'none';
+        });
+
+        // hide whole toc groups if empty
+        tocRoot.querySelectorAll('.toc-group').forEach(g => {
+          const any = Array.from(g.querySelectorAll('.toc-item')).some(li => li.style.display !== 'none');
+          g.style.display = any ? '' : 'none';
+        });
+
+        // also do lightweight content filter: dim non-matching sections
+        document.querySelectorAll('section.doc').forEach(doc => {
+          if (!query) {
+            doc.style.opacity = '1';
+            doc.style.filter = 'none';
+            return;
+          }
+          const text = doc.textContent.toLowerCase();
+          const match = text.includes(query);
+          doc.style.opacity = match ? '1' : '0.25';
+          doc.style.filter = match ? 'none' : 'grayscale(20%)';
+        });
+      }
+
+      input.addEventListener('input', () => apply(input.value));
+
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          input.focus();
+          input.select();
+        }
+        if (e.key === 'Escape') {
+          if (document.activeElement === input || input.value) {
+            input.value = '';
+            input.blur();
+            apply('');
+          }
+        }
+      });
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>

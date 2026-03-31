@@ -55,6 +55,12 @@ public class ArbitrageController {
         response.put("minAnnualReturn", minAnnualReturn);
         response.put("durationMs", duration);
         response.put("timestamp", System.currentTimeMillis());
+        response.put("totalCompanies", arbitrageService.getLastTotalCompanies());
+        response.put("successfulCompanies", arbitrageService.getLastSuccessfulCompanies());
+        response.put("failedCompanies", arbitrageService.getLastFailedCompanies());
+        response.put("totalFuturesProcessed", arbitrageService.getLastTotalFuturesProcessed());
+        response.put("futuresSkippedNoMatch", arbitrageService.getLastFuturesSkippedNoMatch());
+        response.put("futuresSkippedApiError", arbitrageService.getLastFuturesSkippedApiError());
         
         return ResponseEntity.ok(response);
     }
